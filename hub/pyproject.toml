@@ -1,0 +1,10 @@
+[project]
+name = "southpaw-hub"
+version = "0.1.0"
+description = "SouthpawOS Raspberry Pi hub"
+requires-python = ">=3.11"
+dependencies = ["bleak>=1.0,<3"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

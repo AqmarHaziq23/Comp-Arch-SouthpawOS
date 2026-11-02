@@ -1,0 +1,2 @@
+# Raspberry Pi hub (Python 3.11+)
+bleak>=1.0,<3

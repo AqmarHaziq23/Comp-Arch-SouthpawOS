@@ -218,3 +218,37 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------- SouthpawOS ----------------
+# Runtime data stays on the Pi
+logs/
+*.db
+*.sqlite
+*.sqlite3
+hub/boards.toml
+
+# Big media: recordings, video edits, raw training captures
+*.mp4
+*.mov
+*.avi
+*.mkv
+recordings/
+video/
+training/data/raw/
+
+# Arduino / PlatformIO build output
+build/
+.pio/
+*.elf
+*.hex
+*.bin
+
+# 3D printing slicer output (keep .stl/.step)
+*.gcode
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
