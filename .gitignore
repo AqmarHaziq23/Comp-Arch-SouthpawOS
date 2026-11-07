@@ -234,7 +234,7 @@ hub/boards.toml
 *.mkv
 recordings/
 video/
-training/data/raw/
+training/data/raw/*.png
 
 # Arduino / PlatformIO build output
 build/
