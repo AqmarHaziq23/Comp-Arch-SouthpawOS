@@ -1,0 +1,3 @@
+# MediaPipe 1.x requires CPU AES instructions the Raspberry Pi 4 doesn't have,
+# so we pin the last 0.10.x release. Needs Python 3.12 or older.
+mediapipe==0.10.18
