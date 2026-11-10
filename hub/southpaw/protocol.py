@@ -209,7 +209,7 @@ class LineAssembler:
     def feed(self, chunk: bytes | str) -> list[str]:
         if isinstance(chunk, bytes):
             chunk = chunk.decode("ascii", errors="replace")
-        self._buf += chunk.replace("\r", "")
+        self._buf += chunk.replace("\r", "").replace("\x00", "")  # STBLE example sends a trailing NUL
         *lines, self._buf = self._buf.split("\n")
         if len(self._buf) > self.MAX_BUFFER:
             self._buf = ""

@@ -57,3 +57,10 @@ def test_line_assembler_handles_split_and_merged_packets():
     assert a.feed(b"P,L,H,1") == []
     assert a.feed(b"0,5\nI,12,") == ["P,L,H,10,5"]
     assert a.feed(b"40\r\nT,7\n") == ["I,12,40", "T,7"]
+
+
+def test_line_assembler_drops_nul_bytes():
+    # The TinyCircuits UARTPassThrough example sends a NUL after each message.
+    a = p.LineAssembler()
+    assert a.feed(b"P,L,H,1,5\n\x00") == ["P,L,H,1,5"]
+    assert a.feed(b"I,2,40\n\x00") == ["I,2,40"]
