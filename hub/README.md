@@ -30,14 +30,24 @@ Add `-v` before the command for debug logs: `python -m southpaw -v sim`.
 
 ## With the real boards (Pi or laptop with Bluetooth)
 
-1. Flash the TinyCircuits STBLE UART example onto a board.
-2. `python -m southpaw scan` and note the `BlueNRG` addresses. Power boards on
+You don't need the Pi for this: any laptop with Bluetooth works, including
+Windows.
+
+1. Flash **File → Examples → STBLE → UARTPassThrough** onto a board and open
+   the Serial Monitor (the sketch waits for it before starting BLE). It should
+   say `General Discoverable Mode`.
+2. Make sure nothing else is connected to the board (turn off your phone's
+   Bluetooth). A connected board stops advertising and won't show up.
+3. `python -m southpaw scan` and note the `BlueNRG` address. Power boards on
    one at a time to tell them apart.
-3. Copy `boards.example.toml` to `boards.toml` and fill in the addresses
-   (`boards.toml` is gitignored).
-4. `python -m southpaw ble boards.toml --listen` prints everything the boards
-   send: use it for the first "hello" test.
-5. `python -m southpaw ble boards.toml` runs the demo game.
+4. Copy `boards.example.toml` to `boards.toml` and fill in the addresses
+   (`boards.toml` is gitignored). Delete the lines for boards you don't have.
+5. `python -m southpaw ble boards.toml --listen` prints everything the boards
+   send. Type `P,L,H,1234,10` in the Serial Monitor and it shows up here.
+6. `python -m southpaw ble boards.toml` runs the demo game.
+
+"no clock reply" warnings are expected with the UARTPassThrough example,
+because it doesn't answer `T`. Real firmware must.
 
 In `ble` mode the hub also listens on UDP `127.0.0.1:5005` for vision events
 and `:5006` for NFC taps (see `protocol/PROTOCOL.md`).
