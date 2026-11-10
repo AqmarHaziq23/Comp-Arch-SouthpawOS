@@ -43,6 +43,7 @@ static bool punchHandled = false;       // this pass handled a punch: leave the 
 static uint16_t batteryCv = 0;
 static bool bleOk = false;              // the BlueNRG answered in setup()
 static bool usbWasOpen = false;         // to print the info line once each time a program opens the port
+static uint8_t lastBleState = 0;        // 0 advertising, 1 link up but notifications off, 2 connected
 
 // dtr() just reads a flag. Don't use `if (!SerialUSB)`: it runs delay(10) on every call.
 static bool usbOpen() { return SerialMonitorInterface.dtr(); }
@@ -178,6 +179,16 @@ static void housekeeping(uint32_t nowMs) {
   usbWasOpen = open;
 
   display_set_ble(ble_connected());
+  uint8_t bleState = ble_connected() ? 2 : ble_link_up() ? 1 : 0;
+  if (bleState != lastBleState) {
+    lastBleState = bleState;
+    if (open) {
+      static const char* const NAMES[3] = {"# ble state advertising\r\n", "# ble state link-up-notify-off\r\n",
+                                           "# ble state connected (notifications on)\r\n"};
+      const char* s = NAMES[bleState];
+      SerialMonitorInterface.write((const uint8_t*)s, strlen(s));
+    }
+  }
 
   bool ok = sampler_sensor_ok();
   if (ok != lastSensorOk) {
@@ -222,7 +233,7 @@ static void housekeeping(uint32_t nowMs) {
     if (usbOpen()) {
       char line[200];
       char* p = putStr(line, "# ble ");
-      p = putStr(p, !bleOk ? "NOT FOUND" : (ble_connected() ? "connected" : "advertising"));
+      p = putStr(p, !bleOk ? "NOT FOUND" : ble_connected() ? "connected" : ble_link_up() ? "link-up-notify-off" : "advertising");
       p = putStr(p, " sent=");             p = putInt(p, (int32_t)bs.sent);
       p = putStr(p, " pings=");            p = putInt(p, (int32_t)bs.pings);
       p = putStr(p, " failed=");           p = putInt(p, (int32_t)bs.failed);

@@ -26,7 +26,8 @@ struct BleStats {
 
 bool ble_begin();                          // setup() only. False if the BlueNRG didn't answer.
 void ble_poll();                           // every loop pass: events, T replies, queued sends
-bool ble_connected();
+bool ble_connected();                      // link up AND notifications on: sends will arrive
+bool ble_link_up();                        // link up (notifications may not be on yet)
 // Queue one protocol line (must end with '\n', max BLE_MAX_MSG bytes). False = dropped.
 bool ble_queue_line(const char* line, uint8_t len);
 void ble_address(char out[18]);            // advertised address as "AA:BB:CC:DD:EE:FF"

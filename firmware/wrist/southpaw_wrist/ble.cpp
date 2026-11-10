@@ -17,7 +17,8 @@ constexpr uint8_t TX_QUEUE = 4;
 constexpr uint8_t TX_MAX_TRIES = 3;
 
 static bool started = false;
-static bool connected = false;
+static bool connected = false;          // link is up
+static bool notifyOn = false;           // ...and the Pi has switched on notifications, so sends arrive
 static bool needAdvertise = true;
 static uint16_t connHandle = 0;
 static uint16_t uartServHandle = 0;
@@ -123,7 +124,7 @@ void ble_poll() {
     pingPending = false;
     if (connected) answerPing();
   } else if (txCount) {
-    if (!connected) {
+    if (!connected || !notifyOn) {
       stats.dropped += txCount;
       txCount = 0;
       txTries = 0;
@@ -144,10 +145,13 @@ void ble_poll() {
   if (d > stats.maxPollUs) stats.maxPollUs = d;
 }
 
-bool ble_connected() { return connected; }
+// "Connected" means messages will arrive: the link is up AND notifications are on.
+// Punches sent between the two (while the Pi is still discovering services) were lost.
+bool ble_connected() { return connected && notifyOn; }
+bool ble_link_up() { return connected; }
 
 bool ble_queue_line(const char* line, uint8_t len) {
-  if (!started || !connected || len == 0 || len > BLE_MAX_MSG || txCount >= TX_QUEUE) {
+  if (!started || !connected || !notifyOn || len == 0 || len > BLE_MAX_MSG || txCount >= TX_QUEUE) {
     stats.dropped++;
     return false;
   }
@@ -207,6 +211,7 @@ void HCI_Event_CB(void* pckt) {
   switch (eventPckt->evt) {
     case EVT_DISCONN_COMPLETE:
       connected = false;
+      notifyOn = false;
       connHandle = 0;
       needAdvertise = true;               // become connectable again
       break;
@@ -216,6 +221,7 @@ void HCI_Event_CB(void* pckt) {
       if (evt->subevent == EVT_LE_CONN_COMPLETE) {
         evt_le_connection_complete* cc = (evt_le_connection_complete*)evt->data;
         connected = true;
+        notifyOn = false;                 // wait for the Pi to switch notifications on
         connHandle = cc->handle;
       }
       break;
@@ -227,7 +233,11 @@ void HCI_Event_CB(void* pckt) {
         if (connHandle != 0) aci_gatt_allow_read(connHandle);
       } else if (blueEvt->ecode == EVT_BLUE_GATT_ATTRIBUTE_MODIFIED) {
         evt_gatt_attr_modified_IDB05A1* evt = (evt_gatt_attr_modified_IDB05A1*)blueEvt->data;
-        if (evt->attr_handle == uartWriteHandle + 1) onWrite(evt->data_length, evt->att_data);
+        if (evt->attr_handle == uartWriteHandle + 1) {
+          onWrite(evt->data_length, evt->att_data);
+        } else if (evt->attr_handle == uartNotifyHandle + 2 && evt->data_length >= 1) {
+          notifyOn = (evt->att_data[0] & 0x01) != 0;   // CCCD: bit 0 = notifications on
+        }
       }
       break;
     }

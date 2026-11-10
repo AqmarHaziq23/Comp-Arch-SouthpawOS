@@ -178,7 +178,9 @@ Tested on hardware (8–9 Nov):
 
 Windows can keep the link open for about 10 s after `ble_listen.py` exits. The board doesn't advertise while it's connected, so a reconnect straight away may report "not found": wait a few seconds and try again.
 
-**Not yet tested on hardware: punch messages over Bluetooth.** Shake the board while `ble_listen.py` is connected and check each `P,L,X,...` line arrives.
+- **punch messages arrive** (10 Nov): every punch sent while notifications were on reached the laptop, about 250–310 ms after its peak (the 250 ms window plus the Bluetooth connection interval).
+
+The board counts as **connected only once the Pi has switched on notifications**, not as soon as the link is up: punches sent in the gap between the two (while the Pi is still discovering services) were lost. The USB log shows `# ble state link-up-notify-off` then `# ble state connected (notifications on)`, and punches in the gap are reported as `not sent`.
 
 Known protocol gap: until the classifier exists every punch is sent as type `X` (unknown). Protocol v1.1 has no unknown type, so **the hub rejects these** (`ble_listen.py` shows `REJECTED by hub`). Waiting on Haziq to add one.
 
