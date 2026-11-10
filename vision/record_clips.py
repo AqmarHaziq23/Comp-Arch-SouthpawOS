@@ -7,6 +7,10 @@ Records LABELLED punch clips for tuning and testing the punch detector.
   * Shows a big on-screen cue for each punch to throw ("LEFT HOOK  3/10"), one every few seconds.
   * Logs exactly which frame each cue appeared on, so every punch in the video has a label.
 
+Recording and display run separately: a background thread saves EVERY camera frame and logs
+the cues, while the cue window just shows the newest frame as often as it can. So a slow
+display (e.g. through Raspberry Pi Connect) can never make the recording drop frames.
+
 Later, evaluate.py replays these clips through the detector and compares what it detected
 against these labels (a confusion matrix: e.g. "uppercut called hook 3 times out of 10").
 
@@ -17,12 +21,12 @@ Output, in recordings/<session>/  (recordings/ is git-ignored - upload clips to 
   meta.json    session details: camera angle, stance, resolution, date, notes
 
 Examples (run inside the venv, on the Pi desktop so you can see the cues):
-  python record_clips.py --session 45deg_run1 --angle 45
-  python record_clips.py --session side_run1 --angle side --reps 5 --interval 3
-  python record_clips.py --session mixed1 --shuffle          # random order instead of blocks
+  python record_clips.py --session 45R_run1 --angle 45-right
+  python record_clips.py --session 45R_run2 --angle 45-right --reps 5 --interval 3
+  python record_clips.py --session 45R_mixed1 --angle 45-right --shuffle   # random order instead of blocks
 
-Stand where the cue screen is visible from your punching spot. Press Q to stop early
-(everything recorded so far is still saved).
+Stand where the cue screen is visible from your punching spot. Press Q in the window
+(or Ctrl+C in the terminal) to stop early - everything recorded so far is still saved.
 """
 
 import argparse
@@ -31,6 +35,7 @@ import datetime
 import json
 import os
 import random
+import threading
 import time
 
 import cv2
@@ -52,12 +57,14 @@ GREEN = (0, 220, 0)
 YELLOW = (0, 220, 255)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+RED = (0, 0, 255)
 
 
-def build_plan(reps, shuffle):
+def build_plan(reps, shuffle, countdown, interval, block_rest):
     """
-    Make the list of punches to cue, in order.
-    Blocks (default): 10 left jabs, then 10 right crosses, ... - easiest to perform.
+    Make the list of punches to cue, each with the time (seconds after start) it should appear.
+    Blocks (default): 10 left jabs, then 10 right crosses, ... - easiest to perform,
+    with extra rest whenever the punch type changes.
     Shuffle: all punches mixed randomly - closer to a real combo game.
     """
     plan = []
@@ -66,12 +73,22 @@ def build_plan(reps, shuffle):
             plan.append({"hand": hand, "punch": punch, "text": text, "rep": rep})
     if shuffle:
         random.shuffle(plan)
-    return plan
+
+    t = float(countdown)
+    for i, cue in enumerate(plan):
+        new_block = i > 0 and (cue["hand"], cue["punch"]) != (plan[i - 1]["hand"], plan[i - 1]["punch"])
+        if new_block and not shuffle:
+            t += block_rest
+        cue["planned_t"] = t
+        cue["starts_block"] = (i == 0 or new_block) and not shuffle
+        t += interval
+    end_time = t + 1.5   # keep recording briefly after the last cue so the last punch is captured
+    return plan, end_time
 
 
 def draw_big_text(img, text, y, colour, scale=1.6, thickness=4):
     """Draw centred text with a black outline so it is readable on any background."""
-    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)
+    (tw, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)
     x = (img.shape[1] - tw) // 2
     cv2.putText(img, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, BLACK, thickness + 6, cv2.LINE_AA)
     cv2.putText(img, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, colour, thickness, cv2.LINE_AA)
@@ -94,10 +111,104 @@ def open_camera(source, width, height, fps):
     return cap
 
 
+class Recorder(threading.Thread):
+    """
+    Background thread that does all the important work:
+    read every frame -> save it -> log its time -> log a label whenever a cue is due.
+    It never waits for the display, so the recording keeps the camera's full frame rate.
+    The display only READS the shared state below (protected by a lock).
+    """
+
+    def __init__(self, cap, writer, plan, end_time, fps, is_file, labels, frames, print_cues):
+        super().__init__(daemon=True)
+        self.cap, self.writer = cap, writer
+        self.plan, self.end_time = plan, end_time
+        self.fps, self.is_file = fps, is_file
+        self.labels, self.frames = labels, frames
+        self.print_cues = print_cues
+
+        self.lock = threading.Lock()
+        self.stop_requested = False
+        # Shared state the display reads:
+        self.latest_frame = None   # newest camera frame
+        self.now = 0.0             # seconds since recording started
+        self.next_cue = 0          # index of the next cue in the plan
+        self.cue_shown_at = -99.0  # when the most recent cue appeared
+        self.frame_index = 0       # frames saved so far
+        self.ended_reason = ""
+
+    def run(self):
+        start = time.monotonic()
+        while not self.stop_requested:
+            ok, frame = self.cap.read()
+            if not ok:
+                self.ended_reason = "video source ended"
+                break
+
+            # Time since recording started. For a test video file, use the clip's own clock.
+            now = (self.frame_index / self.fps) if self.is_file else (time.monotonic() - start)
+
+            # 1. Save the RAW frame (cue text is only drawn on the display copy)
+            self.writer.write(frame)
+            self.frames.writerow([self.frame_index, f"{now:.4f}"])
+
+            # 2. Is the next cue due? Log which frame it appeared on.
+            new_cue = None
+            if self.next_cue < len(self.plan) and now >= self.plan[self.next_cue]["planned_t"]:
+                cue = self.plan[self.next_cue]
+                self.labels.writerow([self.next_cue, cue["hand"], cue["punch"], cue["rep"],
+                                      self.frame_index, f"{now:.4f}"])
+                new_cue = cue
+
+            # 3. Publish the new state for the display
+            with self.lock:
+                self.latest_frame = frame
+                self.now = now
+                if new_cue is not None:
+                    self.next_cue += 1
+                    self.cue_shown_at = now
+                self.frame_index += 1
+
+            if new_cue is not None and self.print_cues:
+                print(f"[{now:6.2f}s] cue {self.next_cue}/{len(self.plan)}: "
+                      f"{new_cue['text']}  {new_cue['rep']}")
+
+            if now >= self.end_time:
+                self.ended_reason = "finished"
+                break
+        if self.stop_requested:
+            self.ended_reason = "stopped early"
+
+    def snapshot(self):
+        """Copy of the shared state, for the display."""
+        with self.lock:
+            return (self.latest_frame, self.now, self.next_cue, self.cue_shown_at, self.frame_index)
+
+
+def render_cue_screen(frame, now, next_cue, cue_shown_at, plan, args):
+    """Build the cue screen: the camera view with big instructions on top."""
+    display = frame.copy()
+    h = display.shape[0]
+    last = plan[next_cue - 1] if next_cue > 0 else None
+    upcoming = plan[next_cue] if next_cue < len(plan) else None
+
+    if now < args.countdown:
+        draw_big_text(display, f"GET READY  {int(args.countdown - now) + 1}", h // 2, YELLOW)
+    elif upcoming and upcoming["starts_block"] and next_cue > 0 and now - cue_shown_at > args.interval * 0.8:
+        # Resting between punch types: say what's coming next
+        draw_big_text(display, "NEXT: " + upcoming["text"], h // 2, YELLOW, scale=1.2)
+    elif last:
+        # Flash green for the first 0.4 s of each cue = "throw now", then white
+        colour = GREEN if now - cue_shown_at < 0.4 else WHITE
+        draw_big_text(display, f"{last['text']}  {last['rep']}/{args.reps}", h // 2, colour)
+    draw_big_text(display, f"REC  {now:5.1f}s   {next_cue}/{len(plan)}", 40, RED, scale=0.7, thickness=2)
+    return display
+
+
 def main():
     parser = argparse.ArgumentParser(description="Record labelled punch clips")
-    parser.add_argument("--session", required=True, help="name for this recording, e.g. 45deg_run1")
-    parser.add_argument("--angle", default="unknown", help="camera angle, e.g. 45 or side (saved in meta.json)")
+    parser.add_argument("--session", required=True, help="name for this recording, e.g. 45R_run1")
+    parser.add_argument("--angle", default="unknown", help="camera angle, e.g. 45-right (saved in meta.json)")
     parser.add_argument("--stance", default="orthodox", choices=["orthodox", "southpaw"])
     parser.add_argument("--athlete", default="", help="who is punching (optional)")
     parser.add_argument("--notes", default="", help="anything else worth remembering (lighting, distance...)")
@@ -111,10 +222,10 @@ def main():
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--out", default="recordings", help="folder to save sessions in")
-    parser.add_argument("--no-display", action="store_true", help="no window; cues are printed (testing only)")
+    parser.add_argument("--no-display", action="store_true", help="no window; cues are printed instead")
     args = parser.parse_args()
 
-    # --- Prepare the output folder ---------------------------------------------------
+    # --- Prepare the output folder ------------------------------------------------------
     session_dir = os.path.join(args.out, args.session)
     if os.path.exists(session_dir):
         raise SystemExit(f"{session_dir} already exists - pick a new --session name so nothing is overwritten")
@@ -124,23 +235,14 @@ def main():
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cam_fps = cap.get(cv2.CAP_PROP_FPS) or args.fps
+    is_file = not args.source.isdigit()
     print(f"Recording {width}x{height} @ {cam_fps:.0f} fps into {session_dir}/")
 
     # MJPG in an .avi: cheap for the Pi to write, so recording keeps up with the camera
     writer = cv2.VideoWriter(os.path.join(session_dir, "video.avi"),
                              cv2.VideoWriter_fourcc(*"MJPG"), cam_fps, (width, height))
 
-    # --- Build the cue schedule ----------------------------------------------------------
-    # Each cue gets a planned time (seconds after recording starts). Extra rest is added
-    # whenever the punch type changes, so you can reset your stance.
-    plan = build_plan(args.reps, args.shuffle)
-    t = float(args.countdown)
-    for i, cue in enumerate(plan):
-        if i > 0 and (cue["hand"], cue["punch"]) != (plan[i - 1]["hand"], plan[i - 1]["punch"]) and not args.shuffle:
-            t += args.block_rest
-        cue["planned_t"] = t
-        t += args.interval
-    end_time = t + 1.5    # keep recording briefly after the last cue so the last punch is captured
+    plan, end_time = build_plan(args.reps, args.shuffle, args.countdown, args.interval, args.block_rest)
     print(f"{len(plan)} punches planned, about {end_time:.0f} s in total")
 
     labels_file = open(os.path.join(session_dir, "labels.csv"), "w", newline="")
@@ -150,71 +252,37 @@ def main():
     frames = csv.writer(frames_file)
     frames.writerow(["frame", "time_s"])
 
-    next_cue = 0          # index of the next cue in the plan
-    current_text = ""     # cue text currently on screen
-    cue_shown_at = -99.0  # when the current cue appeared (for the green flash)
-    frame_index = 0
-    is_file = not args.source.isdigit()
-    start = time.monotonic()
+    recorder = Recorder(cap, writer, plan, end_time, cam_fps, is_file, labels, frames,
+                        print_cues=args.no_display)
+    recorder.start()
 
     try:
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                print("Video source ended")
-                break
-
-            # Time since recording started. For a test video file, use the clip's own clock.
-            now = (frame_index / cam_fps) if is_file else (time.monotonic() - start)
-
-            # 1. Save the RAW frame first (the cue overlay is only drawn on the display copy)
-            writer.write(frame)
-            frames.writerow([frame_index, f"{now:.4f}"])
-
-            # 2. Time for the next cue? Log which frame it appeared on.
-            if next_cue < len(plan) and now >= plan[next_cue]["planned_t"]:
-                cue = plan[next_cue]
-                labels.writerow([next_cue, cue["hand"], cue["punch"], cue["rep"], frame_index, f"{now:.4f}"])
-                current_text = f"{cue['text']}  {cue['rep']}/{args.reps}"
-                cue_shown_at = now
-                if args.no_display:
-                    print(f"[{now:6.2f}s] cue {next_cue + 1}/{len(plan)}: {current_text}")
-                next_cue += 1
-
-            # 3. Show the cue screen (a copy of the frame, so the saved video stays clean)
-            if not args.no_display:
-                display = frame.copy()
-                if now < args.countdown:
-                    draw_big_text(display, f"GET READY  {int(args.countdown - now) + 1}", height // 2, YELLOW)
-                elif next_cue < len(plan) and (next_cue == 0 or plan[next_cue]["punch"] != plan[next_cue - 1]["punch"]
-                                               or plan[next_cue]["hand"] != plan[next_cue - 1]["hand"]) \
-                        and now - cue_shown_at > args.interval * 0.8 and not args.shuffle:
-                    # Rest between blocks: tell the athlete what's coming next
-                    draw_big_text(display, "NEXT: " + plan[next_cue]["text"], height // 2, YELLOW, scale=1.2)
-                elif current_text:
-                    # Flash green for the first 0.4 s of each cue = "throw now"
-                    colour = GREEN if now - cue_shown_at < 0.4 else WHITE
-                    draw_big_text(display, current_text, height // 2, colour)
-                draw_big_text(display, f"REC  {now:5.1f}s   {next_cue}/{len(plan)}", 40, (0, 0, 255),
-                              scale=0.7, thickness=2)
-                cv2.imshow("Southpaw OS - clip recorder (Q to stop)", display)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    print("Stopped early by user")
-                    break
-
-            frame_index += 1
-            if now >= end_time:
-                break
+        if args.no_display:
+            # Nothing to draw: just wait for the recording to finish
+            while recorder.is_alive():
+                recorder.join(timeout=0.2)
+        else:
+            # Display loop: show the newest frame with the cue text, as often as the screen allows.
+            # If this is slow, the display simply skips frames - the recorder still saves all of them.
+            window = "Southpaw OS - clip recorder (Q to stop)"
+            while recorder.is_alive():
+                frame, now, next_cue, cue_shown_at, _ = recorder.snapshot()
+                if frame is not None:
+                    cv2.imshow(window, render_cue_screen(frame, now, next_cue, cue_shown_at, plan, args))
+                if cv2.waitKey(30) & 0xFF == ord("q"):     # ~30 ms pause = at most ~30 screen updates/s
+                    recorder.stop_requested = True
     except KeyboardInterrupt:
-        print("Stopped early (Ctrl+C)")
+        recorder.stop_requested = True
     finally:
-        duration = (frame_index / cam_fps) if is_file else (time.monotonic() - start)
+        recorder.join(timeout=3)
+        _, duration, cues_shown, _, frame_count = recorder.snapshot()
         cap.release()
         writer.release()
         labels_file.close()
         frames_file.close()
         cv2.destroyAllWindows()
 
+        measured_fps = round(frame_count / duration, 2) if duration > 0 else 0
         # Session details, so we know later how each clip was recorded
         meta = {
             "session": args.session,
@@ -225,20 +293,22 @@ def main():
             "notes": args.notes,
             "width": width, "height": height,
             "camera_fps_requested": cam_fps,
-            "frames_recorded": frame_index,
+            "frames_recorded": frame_count,
             "duration_s": round(duration, 2),
-            "measured_fps": round(frame_index / duration, 2) if duration > 0 else 0,
-            "cues_shown": next_cue,
+            "measured_fps": measured_fps,
+            "cues_shown": cues_shown,
+            "cues_planned": len(plan),
             "reps": args.reps, "interval_s": args.interval, "shuffle": args.shuffle,
+            "ended": recorder.ended_reason,
         }
         with open(os.path.join(session_dir, "meta.json"), "w") as f:
             json.dump(meta, f, indent=2)
 
-        print(f"\nSaved {frame_index} frames ({duration:.1f} s, {meta['measured_fps']} fps) "
-              f"and {next_cue} labelled punches to {session_dir}/")
-        if meta["measured_fps"] and meta["measured_fps"] < cam_fps * 0.9:
+        print(f"\nSaved {frame_count} frames ({duration:.1f} s, {measured_fps} fps) "
+              f"and {cues_shown}/{len(plan)} labelled punches to {session_dir}/ ({recorder.ended_reason})")
+        if measured_fps and measured_fps < cam_fps * 0.9:
             print("WARNING: recorded noticeably slower than the camera - frames were dropped. "
-                  "Close other programs, or try --no-display, and check the lighting (dim light lowers webcam fps).")
+                  "Close other programs and check the lighting (dim light lowers webcam fps).")
 
 
 if __name__ == "__main__":
