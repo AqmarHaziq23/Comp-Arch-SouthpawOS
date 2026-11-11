@@ -202,6 +202,7 @@ class _ArmTracker:
             "t": t, "s": s, "e": e, "w": w, "k": k, "scale": scale,
             "rel": rel,
             "dist": math.dist(rel, self.rest) if self.rest else 0.0,  # how far from the guard position
+            "pose": pose,                                              # whole body, for the twin check
         }
 
     def update(self, t, pose, scale):
@@ -221,29 +222,39 @@ class _ArmTracker:
             return None
 
         frame = self._frame(t, pose, scale)
-        if self.rest is None:                       # first sighting: assume the hand is in guard
+        # Arm dropped (wrist well below the shoulder, e.g. hand hanging by the side between punches)?
+        # In image y, which grows downwards, so "below" = larger y.
+        frame["low"] = frame["rel"][1] > self.cfg_tracker["hand_low_limit"]
+
+        if self.rest is None:
+            # First sighting: assume the hand is in guard - unless it's hanging down
+            if frame["low"]:
+                self.prev, self.last_valid_t = frame, t
+                return None
             self.rest = frame["rel"]
             frame["dist"] = 0.0
 
-        # Speed of the hand (body lengths per second) since the previous good frame
-        speed = 0.0
+        # Speed of the hand, and how fast it moves AWAY from guard (body lengths per second)
+        speed, away_speed = 0.0, 0.0
+        prev_recent = (self.prev is not None and t > self.prev["t"]
+                       and (t - self.prev["t"]) * 1000 <= self.cfg_detect["max_gap_ms"])
         if self.prev is not None and t > self.prev["t"]:
             speed = math.dist(frame["rel"], self.prev["rel"]) / (t - self.prev["t"])
+        if prev_recent:
+            away_speed = (frame["dist"] - self.prev["dist"]) / (t - self.prev["t"])
         frame["speed"] = speed
 
         event = None
         if not self.active:
-            # The previous frame must be recent (it becomes the "guard" reference) and the hand
-            # must be moving AWAY from its guard position. Pulling a hand back moves it TOWARDS
-            # guard, so it never counts. (Distance from the shoulder is not used: from the side,
-            # an uppercut brings the fist closer to the shoulder in the image.)
-            prev_recent = (self.prev is not None
-                           and (t - self.prev["t"]) * 1000 <= self.cfg_detect["max_gap_ms"])
-            leaving_guard = prev_recent and frame["dist"] > self.prev["dist"]
-            if (t >= self.cooldown_until and speed >= self.cfg_detect["trigger_speed"]
-                    and frame["dist"] >= self.cfg_detect["trigger_distance"] and leaving_guard):
+            # A punch starts when the hand moves quickly AWAY from its guard position (its distance
+            # from guard grows fast) and is clearly out of guard. Pulling a hand back, or raising a
+            # dropped hand, moves it TOWARDS guard, so it never counts. The previous frame must be
+            # recent: it becomes the "guard" reference for the punch.
+            if (prev_recent and not frame["low"] and t >= self.cooldown_until
+                    and away_speed >= self.cfg_detect["trigger_speed"]
+                    and frame["dist"] >= self.cfg_detect["trigger_distance"]):
                 self._start(self.prev, frame)
-            elif speed < self.cfg_tracker["quiet_speed"]:
+            elif speed < self.cfg_tracker["quiet_speed"] and not frame["low"]:
                 # Hand is still. Only let the guard position follow it when the hand is near guard,
                 # or has been held still somewhere else for a while (the player changed their guard).
                 # Otherwise a hand held out after a punch would become "guard", and pulling it back
@@ -264,7 +275,11 @@ class _ArmTracker:
             # back and now shoots out again fast. Finish the first punch and start a new one.
             re_extending = (self.prev["dist"] < peak_dist * d["re_extend_ratio"]
                             and frame["dist"] > self.prev["dist"] and speed >= d["trigger_speed"])
-            if re_extending:
+            if frame["low"]:
+                # The hand dropped (e.g. arm hanging down after the punch): the punch is over, and
+                # this frame is NOT part of it (otherwise a hanging arm would become the "peak")
+                event = self._finish(t)
+            elif re_extending:
                 event = self._finish(self.prev["t"])
                 self._start(self.prev, frame)
             else:
@@ -309,7 +324,34 @@ class _ArmTracker:
         self.cooldown_until = t + self.cfg_detect["cooldown_ms"] / 1000.0
         if peak is None or peak["dist"] < self.cfg_detect["min_peak_distance"]:
             return None                                   # too small: a guard adjustment, not a punch
+        if self._is_phantom(peak):
+            return None                                   # far arm copying the near arm: not a real punch
         return self._classify(frames, peak, t)
+
+    def _is_phantom(self, peak):
+        """
+        When the far arm is hidden behind the body, MediaPipe often "snaps" its wrist onto the
+        NEAR arm, so a jab with the near hand also looks like a punch by the far hand.
+        If both wrists are almost in the same place at the peak and THIS is the far arm
+        (its shoulder is further from the camera), treat this punch as a phantom.
+        """
+        limit = self.cfg_detect.get("twin_gap_limit", 0)
+        other = "R" if self.side == "L" else "L"
+        pose = peak["pose"]
+        mine, theirs = peak["w"], pose.get(f"{other}_WRIST")
+        my_sh, their_sh = pose.get(f"{self.side}_SHOULDER"), pose.get(f"{other}_SHOULDER")
+        if not limit or theirs is None or my_sh is None or their_sh is None:
+            return False
+        gap = math.hypot(mine.x - theirs.x, mine.y - theirs.y) / peak["scale"]
+        if gap >= limit:
+            return False
+        # Which arm is further from the camera? MediaPipe's depth (bigger z = further away);
+        # fall back to "the less visible wrist" if 3D points are missing
+        if my_sh.wz is not None and their_sh.wz is not None:
+            far = my_sh.wz > their_sh.wz
+        else:
+            far = mine.vis < theirs.vis
+        return far
 
     def _classify(self, frames, peak, t_end):
         c = self.cfg_class

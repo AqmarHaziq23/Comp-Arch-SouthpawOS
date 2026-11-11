@@ -25,6 +25,7 @@
     "rest_smoothing": 0.25,
     "quiet_speed": 1.0,
     "rest_relearn_s": 1.0,
+    "hand_low_limit": 0.55,
     "motion": "2d",
     "world_body_length_m": 0.5
   },
@@ -38,7 +39,8 @@
     "re_extend_ratio": 0.0,
     "max_duration_ms": 700,
     "max_gap_ms": 300,
-    "cooldown_ms": 200
+    "cooldown_ms": 200,
+    "twin_gap_limit": 0.15
   },
   "classifier": {
     "_comment": "Rules on the peak pose. Elbow angle >= straight_min_elbow_deg = straight; else uppercut score (forearm up + elbow low + rise) >= uppercut_threshold = uppercut, else hook. Use evaluate.py's suggested values.",

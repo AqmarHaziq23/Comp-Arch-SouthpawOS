@@ -39,6 +39,8 @@ DEFAULTS = {
         "rest_smoothing": 0.25,   # how fast each hand's "guard position" adapts while the hand is still
         "quiet_speed": 1.0,       # below this hand speed (body lengths/s) the hand counts as resting in guard
         "rest_relearn_s": 1.0,    # a hand held still AWAY from guard this long becomes the new guard position
+        "hand_low_limit": 0.55,   # wrist more than this far BELOW the shoulder (body lengths) = arm dropped:
+                                  # not a punch, not guard (ends a punch; never used as guard position)
         "motion": "2d",           # how hand movement is measured:
                                   #   "2d"       = in the image only (least noisy)
                                   #   "2d+depth" = image + depth from MediaPipe's 3D points; catches punches
@@ -46,7 +48,7 @@ DEFAULTS = {
         "world_body_length_m": 0.5,  # typical torso length in metres, to put depth in body lengths
     },
     "punch_detector": {
-        "trigger_speed": 1.2,     # a punch starts when the hand moves faster than this (body lengths/s) ...
+        "trigger_speed": 1.2,     # a punch starts when the hand moves AWAY from guard faster than this (body lengths/s) ...
         "trigger_distance": 0.15, # ... and is at least this far from its guard position (body lengths)
         "min_peak_distance": 0.25,  # ignore movements that never get this far from guard (guard adjustments);
                                     # uppercuts are the shortest punches, so this mostly matters for them
@@ -57,6 +59,9 @@ DEFAULTS = {
         "max_duration_ms": 700,   # a single punch never takes longer than this
         "max_gap_ms": 300,        # if the arm is lost for longer than this mid-punch, give up on that punch
         "cooldown_ms": 200,       # after a punch ends, ignore that hand for this long
+        "twin_gap_limit": 0.15,   # both wrists closer than this (body lengths) at the peak = the hidden far
+                                  # arm is copying the near arm (a MediaPipe quirk): drop the far arm's punch.
+                                  # 0 = off
     },
     "classifier": {
         "use_world_angles": True,       # angles from MediaPipe's 3D world points (camera-angle independent)
