@@ -31,6 +31,7 @@ class SimConfig:
     reaction: tuple[float, float] = (0.35, 0.7)  # s before the first punch
     gap: tuple[float, float] = (0.25, 0.45)  # s between punches
     ble_latency: tuple[float, float] = (0.010, 0.045)  # s, one way
+    wrist_delay: tuple[float, float] = (0.25, 0.31)  # s, wrist waits for samples after the peak
     vision_latency: tuple[float, float] = (0.12, 0.30)  # s
     rest_bpm: tuple[int, int] = (150, 175)  # first rest; drops each round
     hr_delay: float = 2.0  # s from M,REST until the player is on the HR station
@@ -112,7 +113,14 @@ class Simulator:
             if self.rng.random() > cfg.type_accuracy:
                 sent = self.rng.choice([c for c in proto.PUNCH_CODES if c != code])
             peak = self.rng.randint(6, 16)
-            self._later(0, self._deliver(wrist, f"P,{hand},{sent},{self.board_ms(wrist, t_punch)},{peak}", self._lat()))
+            self._later(
+                0,
+                self._deliver(
+                    wrist,
+                    f"P,{hand},{sent},{self.board_ms(wrist, t_punch)},{peak}",
+                    self.rng.uniform(*cfg.wrist_delay) + self._lat(),
+                ),
+            )
 
             hit = self.rng.random() < cfg.hit_rate
             if hit:

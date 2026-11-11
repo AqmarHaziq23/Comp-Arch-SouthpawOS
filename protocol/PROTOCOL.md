@@ -1,4 +1,4 @@
-# SouthpawOS Message Protocol — v1.2
+# SouthpawOS Message Protocol — v1.3
 
 Owner: **Haziq (Member C)**. Only the owner changes this file. Bump the version
 and post in the group chat when you do.
@@ -23,9 +23,13 @@ Firmware must match it byte for byte.
 ## Codes
 
 **Punch type** (1 letter, to fit in 20 bytes):
-`J` = jab, `C` = cross, `H` = hook, `U` = uppercut.
-(The Pi also accepts the full words `JAB`, `CROSS`, `HOOK`, `UPPERCUT` while
-firmware is being written, but firmware should send the letters.)
+`J` = jab, `C` = cross, `H` = hook, `U` = uppercut, `X` = unknown.
+Send `X` when the board detected a punch but can't tell which type (for
+example before the classifier exists). An `X` punch still counts as thrown and
+can still land, but never matches a called punch unless the camera supplies
+the type.
+(The Pi also accepts the full words `JAB`, `CROSS`, `HOOK`, `UPPERCUT` and
+`UNKNOWN`, but firmware should send the letters.)
 
 **Hand:** `L` or `R`.
 
@@ -64,6 +68,20 @@ UDP datagram sent to `127.0.0.1`:
 
 `t` is Pi time in seconds from `time.monotonic()` on the same Pi.
 
+### Punch fields
+
+`P,<hand>,<type>,<board_ms>,<peak_g>`
+
+- `board_ms`: `millis()` at the **peak sample**, the moment closest to contact
+  with the bag. This is what gets matched against the bag's impact time.
+- `peak_g`: total acceleration at the peak, `sqrt(x² + y² + z²)` in g, rounded
+  to the nearest whole g. Can reach about 27, because each axis clips at 16 g.
+- The message is sent once the board has the samples after the peak, so it
+  arrives about 250–310 ms after `board_ms`. The hub waits long enough for it.
+- Punches thrown while the board is disconnected are dropped, not queued.
+- Wrist boards ignore everything from the Pi except `T`. The Pi doesn't send
+  them anything else.
+
 ## Boards
 
 | Name in `boards.toml` | Board | Owner |
@@ -71,6 +89,11 @@ UDP datagram sent to `127.0.0.1`:
 | `wristL`, `wristR` | Forearm boards | Member A |
 | `bag` | Bag station (screen, impacts, buzzer) | Member B |
 | `hr` | Heart-rate station (pulse sensor) | ZH |
+
+The hub finds boards **by address only**, set in `hub/boards.toml`. The
+advertised name (for example `P1D-WRIST-L`) is ignored, so naming the boards
+is optional and just helps when scanning. A board's address stays the same
+across power cycles.
 
 The heart-rate station doesn't need any commands from the Pi. It just sends
 `H` while someone's finger is on the sensor, and the hub uses the readings it
@@ -92,6 +115,9 @@ must answer `T` straight away, before any slow work such as drawing the screen.
 
 ## Changelog
 
+- **v1.3 (11 Nov 2026):** added punch type `X` (unknown), wrote down what
+  `board_ms` and `peak_g` mean and the wrist's send delay, and that boards are
+  found by address.
 - **v1.2 (10 Nov 2026):** heart rate now comes from its own station (`hr`)
   instead of the bag board.
 - **v1.1 (2 Nov 2026):** punch types shortened to one letter and combos sent as

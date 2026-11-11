@@ -6,6 +6,8 @@ from southpaw import protocol as p
 def test_parse_punch_letters_and_words():
     assert p.parse_board("P,L,H,48213,11") == p.Punch("L", "H", 48213, 11)
     assert p.parse_board("P,R,UPPERCUT,5,9\n") == p.Punch("R", "U", 5, 9)
+    assert p.parse_board("P,L,X,48213,27") == p.Punch("L", "X", 48213, 27)
+    assert p.parse_board("P,L,UNKNOWN,1,3") == p.Punch("L", "X", 1, 3)
 
 
 def test_parse_other_board_messages():
@@ -40,7 +42,7 @@ def test_commands_fit_one_ble_packet():
 
 def test_worst_case_board_messages_fit():
     # ~27 hours of uptime in millis is 8 digits; still fits.
-    for msg in ("P,L,U,99999999,16\n", "I,99999999,100\n", "T,99999999\n", "H,250,1\n"):
+    for msg in ("P,L,U,99999999,16\n", "P,R,X,99999999,27\n", "I,99999999,100\n", "T,99999999\n", "H,250,1\n"):
         assert len(msg) <= p.MAX_BLE_PAYLOAD, msg
 
 
