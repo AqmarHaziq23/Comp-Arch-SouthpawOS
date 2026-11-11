@@ -91,7 +91,7 @@ static char* putXYZ(char* p, int16_t x, int16_t y, int16_t z) {
 // Built in one buffer and sent with one write(), for the same reason as printSample().
 static void printPunch(const PunchFeatures& f, PunchType t) {
   static const char AXES[3] = {'x', 'y', 'z'};
-  char line[200];
+  char line[256];
   char* p = line;
   p = putStr(p, "# punch n=");      p = putInt(p, (int32_t)punchCount);
   p = putStr(p, " peak_ms=");       p = putInt(p, (int32_t)f.peakMs);
@@ -102,6 +102,10 @@ static void printPunch(const PunchFeatures& f, PunchType t) {
   p = putStr(p, " tilt=");          p = putInt(p, f.tiltChange);
   p = putStr(p, " pre=");           p = putXYZ(p, f.preX, f.preY, f.preZ);
   p = putStr(p, " post=");          p = putXYZ(p, f.postX, f.postY, f.postZ);
+  p = putStr(p, " max=");           p = putXYZ(p, f.maxX, f.maxY, f.maxZ);
+  p = putStr(p, " min=");           p = putXYZ(p, f.minX, f.minY, f.minZ);
+  p = putStr(p, " order=");         p = putXYZ(p, f.orderX, f.orderY, f.orderZ);
+  p = putStr(p, " win_peak=");      p = putInt(p, f.winPeakMag);
   p = putStr(p, " type=");          *p++ = punch_code(t);
   *p++ = '\r';
   *p++ = '\n';

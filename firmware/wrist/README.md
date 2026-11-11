@@ -95,7 +95,7 @@ python training/tools/segment_punches.py --set DETECT_THRESHOLD_COUNTS=128   # t
 
 It runs **the same detector and features as the board** (constants read from `southpaw_wrist/config.h`, integer maths identical to `detector.cpp` / `features.cpp`), then:
 - prints punches found per file. If you threw 10 jabs and it finds 7 or 13, tune the threshold or cooldown before trusting the data;
-- writes `training/data/features.csv`, one row per punch, with the label, hand and person taken from the file name;
+- writes `training/data/features.csv`, one row per punch, with the label, hand and person taken from the file name. Besides the values at the peak (`peak_*`, `dom_*`, `burst_ms`, tilt), it has **whole-window** values that don't depend on which sample the detector called the peak: each axis's `max_*` and `min_*`, `order_*` (ms from the max to the min, > 0 = max first) and `win_peak_counts`;
 - saves `<file>_punches.png` next to each CSV, one panel per punch, so you can check the cuts by eye (PNGs are gitignored).
 
 If you change the detector or features in the firmware, change `segment_punches.py` the same way.
@@ -142,7 +142,7 @@ The battery value is the chip's supply voltage, so it stays near 3.2–3.3 V and
 USB (Serial Monitor at 115200, or any program that opens the port):
 - `board_ms,x,y,z` raw samples, 200 per second;
 - `# southpaw_wrist name=P1D-WRIST-L hand=L ble=C2:0D:12:83:DF:85 ...` once when the port opens (`ble=` is the address the Pi will see);
-- `# punch n=3 peak_ms=... peak_g=9 dom=-z burst_ms=220 tilt=45 ... type=X` for each punch, then `# ble tx P,L,X,48213,9` (or `# ble not sent (not connected) ...`);
+- `# punch n=3 peak_ms=... peak_g=9 dom=-z burst_ms=220 tilt=45 ... max=... min=... order=... win_peak=... type=X` for each punch, then `# ble tx P,L,X,48213,9` (or `# ble not sent (not connected) ...`);
 - `# stats ...` and `# ble ...` every 5 s: sample count (should be 1000), worst sample lateness, punches, knocks ignored, Bluetooth sends and failures.
 
 ### Settings in `config.h`

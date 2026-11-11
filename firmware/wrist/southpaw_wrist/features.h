@@ -20,6 +20,13 @@ struct PunchFeatures {
   int16_t preX, preY, preZ;     // gravity before: average of the first GRAVITY_AVG_SAMPLES of the window
   int16_t postX, postY, postZ;  // gravity after: average of the last GRAVITY_AVG_SAMPLES
   uint16_t tiltChange;  // |after - before| in counts: 0 = same tilt, ~45 = 90 deg, 64 = 180 deg
+
+  // Whole-window features: they don't depend on which sample the detector picked as the peak.
+  // (On hooks and uppercuts it picks the swing on some punches and the snap on others.)
+  int16_t maxX, maxY, maxZ;     // largest value of each axis in the window, counts
+  int16_t minX, minY, minZ;     // smallest value of each axis in the window, counts
+  int16_t orderX, orderY, orderZ;  // ms from that axis's max to its min: > 0 = max came first
+  uint16_t winPeakMag;          // largest total acceleration in the window, counts
 };
 
 uint32_t isqrt32(uint32_t v);                 // floor(sqrt(v))
