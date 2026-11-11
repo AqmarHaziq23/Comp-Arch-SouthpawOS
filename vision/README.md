@@ -7,16 +7,15 @@ The game must keep working when this process is off.
 ## What it does
 
 The wrist boards are the main punch detector. Vision is a **second opinion**,
-focused on the two things the accelerometers are worst at:
+focused on what the accelerometers are worst at:
 
 1. **Hook vs uppercut** — the accelerometer's most common mix-up.
 2. **Contact** — did the fist actually reach the bag?
 
 ```
-webcam ─► capture ─► pose model (33 body points) ─► tracker ─► punch detector ─► classifier ─┐
-                                                                         contact check ──────┤
-                                                                                             ▼
-                                                    debug overlay              UDP sender ─► hub (Member C)
+webcam ─► camera.py ─► pose model (33 body points) ─► punch_detector.py ─► contact.py ─► sender.py ─► hub (Member C)
+                                                            │
+                                                            └─► overlay window / recording (vision_main.py)
 ```
 
 ## Status
@@ -25,10 +24,11 @@ webcam ─► capture ─► pose model (33 body points) ─► tracker ─► p
 |---|---|
 | Pi + webcam setup | ✅ Done |
 | `pose_preview.py` — live skeleton, wrist trails, FPS | ✅ Working (~9 fps on the Pi 4) |
-| Labelled test clips | ⏳ Next |
-| Punch detector + classifier | ⏳ Planned |
-| Bag-zone calibration + contact | ⏳ Planned |
-| UDP sender + heartbeat | ⏳ Planned |
+| Labelled clips (`record_clips.py`) + landmark extraction | ✅ Working; first test clips recorded (45° left tracked best) |
+| Punch detector + classifier (`punch_detector.py`) | ✅ Built; 93–100% on synthetic data — **needs tuning on real clips** |
+| Evaluation (`evaluate.py`, `plot_punches.py`) | ✅ Built |
+| Bag-zone calibration + contact (`calibrate.py`, `contact.py`) | ✅ Built; needs a real bag to calibrate |
+| Live process → hub (`vision_main.py`, `sender.py`) | ✅ Built; tested end to end with a fake hub — **needs testing with C's hub** |
 
 ## Hardware
 
@@ -47,9 +47,7 @@ webcam ─► capture ─► pose model (33 body points) ─► tracker ─► p
 It needs the CPU's AES crypto instructions, which the Pi 4's Cortex-A72 doesn't have.
 **0.10.18** is the last version without that requirement, and it only supports Python ≤ 3.12.
 Pi OS Trixie ships Python 3.13, so we use [uv](https://docs.astral.sh/uv/) to get a separate
-Python 3.12 just for this project.
-
-Use the same versions on every machine so results match.
+Python 3.12 just for this project. Use the same versions on every machine so results match.
 
 ### On the Pi
 
@@ -71,7 +69,7 @@ python -c "import mediapipe as mp; print(mp.__version__)"   # 0.10.18
 Don't install `opencv-python` separately: MediaPipe already brings
 `opencv-contrib-python`, and two OpenCV packages in one venv conflict.
 
-### On a Windows laptop (for testing, or as the backup vision machine)
+### On a Windows laptop (for tuning, or as the backup vision machine)
 
 ```powershell
 cd Comp-Arch-SouthpawOS\vision
@@ -89,25 +87,64 @@ wget -O pose_landmarker_lite.task \
   https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
 ```
 
-## Running
+## Workflow
+
+### 1. Record labelled clips (on the Pi desktop)
 
 ```bash
-python pose_preview.py                        # live window — run on the Pi desktop (Raspberry Pi Connect)
-python pose_preview.py --no-display           # no window, prints FPS once a second (works over SSH)
-python pose_preview.py --record test1.mp4     # also save the overlay video
-python pose_preview.py --source clip.mp4      # run on a recorded clip instead of the webcam
+python record_clips.py --session 45L_run1 --angle 45-left --athlete Johanan --notes "lighting, distance..."
+python record_clips.py --session 45L_mixed1 --angle 45-left --shuffle
 ```
 
-Press **Q** in the window, or **Ctrl+C** in the terminal, to stop.
+### 2. Extract body points at the Pi's real speed (Pi or laptop)
 
-The first lines of output contain harmless MediaPipe warnings (`cpuinfo`, `Feedback manager`,
-`NORM_RECT`) — ignore them.
+```bash
+python extract_landmarks.py recordings/45L_run1 recordings/45L_mixed1 --sim-fps 9
+```
 
-## Remote access to the Pi
+### 3. Look, score, tune (laptop is fastest)
 
-- **Terminal:** `ssh vision@southpaw`
-- **Desktop (needed for the live window):** connect.raspberrypi.com → `southpaw` → Screen sharing.
-  The browser view looks laggier than the script really is; trust the FPS in the overlay.
+```bash
+python plot_punches.py recordings/45L_run1                          # see how the punch types differ
+python evaluate.py recordings/45L_run1 recordings/45L_mixed1 --plot  # accuracy + suggested thresholds
+python evaluate.py recordings/45L_run1 --set classifier.straight_min_elbow_deg=115   # try a value
+```
+
+Copy good values into `config.json`. Tune on one session, check on another.
+
+### 4. Calibrate the bag zone (each time the camera moves)
+
+```bash
+python calibrate.py                    # click the bag's corners (needs the desktop)
+python calibrate.py --snapshot snap.jpg && python calibrate.py --points "x1,y1 x2,y2 x3,y3 x4,y4"   # over SSH
+```
+
+### 5. Run live
+
+```bash
+python udp_listener.py                 # terminal 1: fake hub (skip when C's hub is running)
+./run_vision.sh --window               # terminal 2: vision with overlay (Pi desktop)
+./run_vision.sh                        # no window (SSH / demo day)
+./run_vision.sh --record overlay.mp4   # save overlay footage for the YouTube video
+```
+
+## Messages to the hub
+
+One JSON object per UDP datagram to `output.hub_host:output.hub_port` (default `127.0.0.1:5005`):
+
+```json
+{"v":1,"src":"vision","kind":"punch","t":1731.42,"t_wall":1794356123.5,"t_start":1731.21,"age_ms":142,
+ "hand":"L","type":"hook","contact":true,"conf":0.82}
+{"v":1,"src":"vision","kind":"status","t":1732.0,"fps":8.9,"person":true,"camera":true}
+```
+
+- `t` = capture time of the punch's **peak** frame, `time.monotonic()` on the Pi (same clock as the hub on the same Pi).
+  `t_wall` = the same moment as `time.time()`, for a hub that uses the wall clock.
+  If vision runs on another machine, use *receive time − `age_ms`*.
+- `contact` is `null` when the bag zone isn't calibrated.
+- Vision events arrive **~0.25–0.45 s after the punch peak** (detection waits for the punch to finish,
+  plus one pose-model frame). The hub should allow for that when matching.
+- `status` arrives once a second; no status for ~3 s = vision is off.
 
 ## Measured performance (Pi 4, lite model, 640×480)
 
@@ -116,23 +153,38 @@ The first lines of output contain harmless MediaPipe warnings (`cpuinfo`, `Feedb
 | Processing speed | ~8.9 fps |
 | Pose model time | ~105 ms per frame |
 | Frame age (capture → result) | ~120–140 ms |
-
-At ~9 fps a punch (0.2–0.3 s) spans only 2–3 frames, so the classifier compares the
-**start pose with the peak pose** (elbow angle, wrist position relative to the shoulder)
-rather than following a smooth path. Re-measure with the hub running on the same Pi; if
-FPS drops too far, run vision on a laptop instead (only `hub_host` in `config.json` changes).
+| Punch peak → event at hub (simulated) | ~250–450 ms (median ~340) |
 
 ## Files
 
 | File | Purpose |
 |---|---|
+| `vision_main.py` | **The live process**: camera → pose → punches → hub, overlay, heartbeat |
+| `run_vision.sh` | One-command start (lower CPU priority than the hub) |
+| `punch_detector.py` | Punch detection + classification (used live and by `evaluate.py`) |
+| `vision_config.py` | Default settings + loading `config.json` and `--set` overrides |
+| `config.json` | Thresholds, camera, hub address — tune here, not in code |
+| `camera.py` | Webcam (newest-frame thread, auto-reconnect) and clip playback |
+| `contact.py` / `calibrate.py` | Bag-zone contact check / marking the bag zone |
+| `sender.py` | UDP JSON messages to the hub |
+| `udp_listener.py` | Fake hub for testing; includes an asyncio receive example for Member C |
 | `pose_preview.py` | Live pose preview + FPS test |
-| `config.json` | Thresholds, camera settings, hub address — tune here, not in code |
+| `record_clips.py` | Records labelled punch clips |
+| `extract_landmarks.py` | Clip → body-point CSV (optionally at simulated Pi speed) |
+| `evaluate.py` | Scores the detector against labels; suggests thresholds |
+| `plot_punches.py` | Charts each labelled punch's path and elbow angle |
+| `tools/synth_session.py` | Fake labelled sessions for testing without a camera |
 | `requirements.txt` | Pinned packages (`mediapipe==0.10.18`) |
 | `pose_landmarker_lite.task` | The pose model |
 
 Machine-specific files (`.venv/`, recordings, `calibration.local.json`) are git-ignored.
 Test clips live in the team Google Drive, not in the repo.
+
+## Remote access to the Pi
+
+- **Terminal:** `ssh vision@southpaw.local` (works at home and on the iPhone hotspot); at home also `ssh vision@southpaw`
+- **Desktop (needed for windows):** connect.raspberrypi.com → `southpaw` → Screen sharing
+- **Fallback:** Raspberry Pi Connect → Remote shell → `hostname -I` to find the IP
 
 ## Troubleshooting
 
@@ -140,17 +192,19 @@ Test clips live in the team Google Drive, not in the repo.
 |---|---|
 | `Illegal instruction` / `compiled with aes enabled` | Wrong MediaPipe version — recreate the venv with Python 3.12 and `mediapipe==0.10.18` |
 | `Could not open webcam 0` | Check `v4l2-ctl --list-devices`; try `--source 1` |
-| Window error mentioning Qt or xcb | `QT_QPA_PLATFORM=xcb python pose_preview.py` |
+| Window error mentioning Qt or xcb | `QT_QPA_PLATFORM=xcb python ...` |
 | FPS much lower than ~9 | `vcgencmd get_throttled` — fix power/cooling if not `0x0` |
 | "Person: NOT FOUND" during fast punches | More light; keep head, shoulders and fists in frame |
 | Pi unreachable on Wi-Fi after a while | Wi-Fi power saving: `sudo iw wlan0 set power_save off` |
+| `Address already in use` from `udp_listener.py` | Another listener (or the hub) already has port 5005 |
+| Recorder reports < 27 fps | Close the cue window's other apps; `v4l2-ctl -d /dev/video0 -c exposure_dynamic_framerate=0` |
 
 ## Credits
 
 - **Pose model:** MediaPipe Pose Landmarker (BlazePose GHUM 3D, lite), Google — Apache 2.0.
   <https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker>
 - **Paper:** V. Bazarevsky et al., "BlazePose: On-device Real-time Body Pose tracking", 2020.
-- **Libraries:** MediaPipe (Apache 2.0), OpenCV (Apache 2.0).
+- **Libraries:** MediaPipe (Apache 2.0), OpenCV (Apache 2.0), NumPy, Matplotlib.
 
-Our own work: the capture pipeline, wrist tracking, punch detection and classification rules,
-contact detection, calibration and the hub messaging.
+Our own work: the capture pipeline, punch detection and classification rules, Pi-speed
+simulation, evaluation tools, contact detection, calibration and the hub messaging.

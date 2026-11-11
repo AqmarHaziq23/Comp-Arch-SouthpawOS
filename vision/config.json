@@ -1,73 +1,75 @@
 {
-  "_comment": "Southpaw OS vision settings (Member D). Machine-specific bag corners go in calibration.local.json.",
-  "protocol_version": 1,
-
+  "_comment": "Southpaw OS vision settings (Member D). Any value left out falls back to the default in vision_config.py. Try a value once without editing: --set section.name=value",
   "camera": {
-    "_comment": "Webcam settings. source: webcam number (0 = /dev/video0) or a video file path.",
+    "_comment": "Webcam number (0 = /dev/video0), a /dev/v4l/by-id/... path, or a video file.",
     "source": "0",
     "width": 640,
     "height": 480,
-    "fps": 30,
-    "format": "MJPG",
-    "manual_exposure": false,
-    "exposure_time": 150
+    "fps": 30
   },
-
   "pose": {
-    "_comment": "MediaPipe PoseLandmarker. min_visibility: ignore body points below this (hidden or off-screen).",
+    "_comment": "MediaPipe PoseLandmarker settings. min_visibility: ignore body points below this (hidden/off-screen).",
     "model_path": "pose_landmarker_lite.task",
     "min_detection_confidence": 0.5,
     "min_presence_confidence": 0.5,
     "min_tracking_confidence": 0.5,
     "min_visibility": 0.5
   },
-
   "player": {
-    "_comment": "orthodox = left hand leads (jab = left). southpaw = right hand leads.",
+    "_comment": "orthodox = left hand leads (left straight = jab). southpaw = the reverse.",
     "stance": "orthodox"
   },
-
   "tracker": {
-    "_comment": "smoothing: 0 = none, closer to 1 = smoother but laggier. Distances are in shoulder widths.",
-    "smoothing": 0.3,
-    "history_seconds": 1.0
+    "_comment": "Distances in body lengths (torso length on screen). motion: '2d' (default, least noisy) or '2d+depth' (adds MediaPipe 3D depth; catches punches towards/away from the camera, but noisy depth causes false alarms).",
+    "scale_smoothing": 0.05,
+    "rest_smoothing": 0.25,
+    "quiet_speed": 1.0,
+    "rest_relearn_s": 1.0,
+    "motion": "2d",
+    "world_body_length_m": 0.5
   },
-
   "punch_detector": {
-    "_comment": "A punch starts when the wrist moves faster than min_wrist_speed (shoulder widths per second) while the elbow straightens.",
-    "min_wrist_speed": 3.0,
-    "min_elbow_opening_deg": 20,
-    "cooldown_ms": 300
+    "_comment": "When a hand movement counts as a punch, and when it is over. See punch_detector.py for the logic.",
+    "trigger_speed": 1.2,
+    "trigger_distance": 0.15,
+    "min_peak_distance": 0.25,
+    "end_ratio": 0.75,
+    "end_ratio_fast": 0.55,
+    "re_extend_ratio": 0.0,
+    "max_duration_ms": 700,
+    "max_gap_ms": 300,
+    "cooldown_ms": 200
   },
-
   "classifier": {
-    "_comment": "Rules on the peak pose. Elbow angle: 180 = arm fully straight.",
-    "straight_min_elbow_deg": 150,
-    "hook_max_elbow_deg": 125,
-    "uppercut_min_rise": 0.4,
-    "hook_min_sideways": 0.4,
-    "min_confidence_to_send": 0.4
+    "_comment": "Rules on the peak pose. Elbow angle >= straight_min_elbow_deg = straight; else uppercut score (forearm up + elbow low + rise) >= uppercut_threshold = uppercut, else hook. Use evaluate.py's suggested values.",
+    "use_world_angles": true,
+    "straight_min_elbow_deg": 120,
+    "uppercut_forearm_weight": 0.45,
+    "uppercut_elbow_weight": 0.35,
+    "uppercut_rise_weight": 0.2,
+    "uppercut_elbow_drop_full": 0.4,
+    "uppercut_rise_full": 0.3,
+    "uppercut_threshold": 0.5,
+    "min_confidence_to_send": 0.3
   },
-
   "contact": {
-    "_comment": "Fist counts as touching the bag if the knuckle point is inside the bag zone (plus margin_px).",
+    "_comment": "Bag zone outline from calibrate.py (calibration.local.json, git-ignored).",
+    "calibration_file": "calibration.local.json",
     "use_knuckle_point": true,
-    "margin_px": 10,
-    "bag_zone_default": []
+    "margin_px": 10
   },
-
   "output": {
-    "_comment": "Where vision events go. Agree host/port with Member C. Use the laptop's IP here if vision runs on the Pi but the hub doesn't (or the reverse).",
+    "_comment": "Where vision events go (UDP JSON). Same Pi as the hub: 127.0.0.1. Vision on a laptop: the Pi's IP.",
     "hub_host": "127.0.0.1",
     "hub_port": 5005,
-    "heartbeat_interval_s": 1.0
+    "heartbeat_interval_s": 1.0,
+    "enabled": true
   },
-
   "debug": {
-    "_comment": "show_window needs a desktop (Pi Connect). record_path: null = don't record.",
+    "_comment": "show_window needs a desktop (Raspberry Pi Connect). record_path: null = don't record.",
     "show_window": true,
     "record_path": null,
     "trail_length": 15,
-    "print_stats": true
+    "print_events": true
   }
 }

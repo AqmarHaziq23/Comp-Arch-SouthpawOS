@@ -180,14 +180,8 @@ def main():
                     draw_overlay(frame, pose, trails, stats, last_event, contact, min_vis)
                     if record_path:
                         if writer is None:
-                            # --fast on a clip processes EVERY frame, so save at the clip's own frame rate
-                            # (smooth 30 fps footage). Live, save at the rate we're actually processing.
-                            if args.fast and getattr(source, "clip_fps", None):
-                                out_fps = source.clip_fps
-                            else:
-                                out_fps = max(5.0, round(stats["fps"]) or 9.0)
                             writer = cv2.VideoWriter(record_path, cv2.VideoWriter_fourcc(*"mp4v"),
-                                                     out_fps, (width, height))
+                                                     max(5.0, round(stats["fps"]) or 9.0), (width, height))
                         writer.write(frame)
                     if show:
                         cv2.imshow("Southpaw OS - vision (Q to quit)", frame)
