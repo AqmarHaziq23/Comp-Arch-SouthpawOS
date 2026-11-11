@@ -1,4 +1,4 @@
-# SouthpawOS Message Protocol — v1.1
+# SouthpawOS Message Protocol — v1.2
 
 Owner: **Haziq (Member C)**. Only the owner changes this file. Bump the version
 and post in the group chat when you do.
@@ -47,7 +47,7 @@ firmware is being written, but firmware should send the letters.)
 | Wrist → Pi | Punch | `P,L,H,48213,11` | Left hand, hook, board time 48213 ms, peak 11 g |
 | Wrist → Pi | Raw window (training mode only) | `R,...` | Raw samples for the training set (format owned by Member A) |
 | Bag → Pi | Impact | `I,48260,72` | Bag hit at 48260 ms, strength 72/100 |
-| Bag → Pi | Heart rate | `H,142,1` | 142 BPM; `1` = good reading, `0` = unreliable |
+| HR station → Pi | Heart rate | `H,142,1` | 142 BPM; `1` = good reading, `0` = unreliable. Sent about every 2 s while a finger is on the sensor |
 | Pi → Bag | Combo | `C,1-2-3` | Show this combo (jab, cross, lead hook) and play the cue |
 | Pi → Bag | Sound | `S,HIT` | `BELL`, `WARN`, `HIT` or `MISS` |
 | Pi → Bag | Mode | `M,REST` | `ROUND`, `REST` (heart-rate prompt) or `SUMMARY` |
@@ -63,6 +63,18 @@ UDP datagram sent to `127.0.0.1`:
 | NFC reader | 5006 | `{"uid": "04A2B91C"}` |
 
 `t` is Pi time in seconds from `time.monotonic()` on the same Pi.
+
+## Boards
+
+| Name in `boards.toml` | Board | Owner |
+|-----------------------|-------|-------|
+| `wristL`, `wristR` | Forearm boards | Member A |
+| `bag` | Bag station (screen, impacts, buzzer) | Member B |
+| `hr` | Heart-rate station (pulse sensor) | ZH |
+
+The heart-rate station doesn't need any commands from the Pi. It just sends
+`H` while someone's finger is on the sensor, and the hub uses the readings it
+gets during rest periods. Like every board, it must answer `T`.
 
 ## Clock sync
 
@@ -80,6 +92,8 @@ must answer `T` straight away, before any slow work such as drawing the screen.
 
 ## Changelog
 
+- **v1.2 (10 Nov 2026):** heart rate now comes from its own station (`hr`)
+  instead of the bag board.
 - **v1.1 (2 Nov 2026):** punch types shortened to one letter and combos sent as
   numbers, because `P,L,UPPERCUT,1234567,16` (23 bytes) and
   `C,UPPERCUT-UPPERCUT-HOOK` overflowed the 20-byte BLE packet. Added the `\n`

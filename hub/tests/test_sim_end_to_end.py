@@ -17,7 +17,7 @@ def test_demo_round_with_simulator(tmp_path):
 
         runner = asyncio.create_task(sim.start(hub.on_line, on_connect))
         await asyncio.sleep(0)
-        while not all(hub.clocks.get(b) and hub.clocks[b].synced for b in ("wristL", "wristR", "bag")):
+        while not all(hub.clocks.get(b) and hub.clocks[b].synced for b in ("wristL", "wristR", "bag", "hr")):
             await asyncio.sleep(0.05)
         results = await run_demo(
             hub, rounds=1, combos_per_round=2, combo_time=2.5, rest_time=0.5, seed=3, printer=lambda s: None
