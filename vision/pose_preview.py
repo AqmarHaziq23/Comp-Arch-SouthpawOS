@@ -26,11 +26,16 @@ Model: pose_landmarker_lite.task from Google's MediaPipe model page.
 import argparse
 import collections
 import threading
+import sys
 import time
 
 import cv2
 import mediapipe as mp
 from mediapipe.tasks.python import BaseOptions, vision
+
+# Fastest webcam driver for this OS: DirectShow on Windows (the default, Media Foundation,
+# can take 10-30 s to open a USB webcam), V4L2 on Linux / the Pi
+WEBCAM_BACKEND = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_V4L2
 
 
 # ---------------------------------------------------------------------------
@@ -71,8 +76,8 @@ class LatestFrameCamera:
     """
 
     def __init__(self, index, width, height, fps):
-        # CAP_V4L2 = use Linux's standard webcam driver directly
-        self.cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
+        # Use the fastest webcam driver for this OS (see WEBCAM_BACKEND)
+        self.cap = cv2.VideoCapture(index, WEBCAM_BACKEND)
         if not self.cap.isOpened():
             # Fall back to OpenCV's default backend (e.g. when testing on Windows)
             self.cap = cv2.VideoCapture(index)

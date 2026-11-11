@@ -22,7 +22,13 @@ import argparse
 import datetime
 import json
 
+import sys
+
 import cv2
+
+# Fastest webcam driver for this OS: DirectShow on Windows (the default, Media Foundation,
+# can take 10-30 s to open a USB webcam), V4L2 on Linux / the Pi
+WEBCAM_BACKEND = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_V4L2
 
 from vision_config import load_config
 
@@ -30,7 +36,7 @@ from vision_config import load_config
 def grab_frame(source, width, height):
     """One frame from the webcam (number or /dev path) or a video file."""
     if str(source).isdigit() or str(source).startswith("/dev/"):
-        cap = cv2.VideoCapture(int(source) if str(source).isdigit() else source, cv2.CAP_V4L2)
+        cap = cv2.VideoCapture(int(source) if str(source).isdigit() else source, WEBCAM_BACKEND)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)

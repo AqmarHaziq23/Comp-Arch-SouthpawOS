@@ -36,9 +36,14 @@ import json
 import os
 import random
 import threading
+import sys
 import time
 
 import cv2
+
+# Fastest webcam driver for this OS: DirectShow on Windows (the default, Media Foundation,
+# can take 10-30 s to open a USB webcam), V4L2 on Linux / the Pi
+WEBCAM_BACKEND = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_V4L2
 
 # Punches to record, as (hand, punch type, text shown on screen).
 # Orthodox stance: left = lead hand (jab), right = rear hand (cross).
@@ -97,7 +102,7 @@ def draw_big_text(img, text, y, colour, scale=1.6, thickness=4):
 def open_camera(source, width, height, fps):
     """Open the webcam (number) or a video file (path, used for testing the script)."""
     if source.isdigit():
-        cap = cv2.VideoCapture(int(source), cv2.CAP_V4L2)
+        cap = cv2.VideoCapture(int(source), WEBCAM_BACKEND)
         if not cap.isOpened():
             cap = cv2.VideoCapture(int(source))      # fallback for non-Linux machines
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))   # compressed = full 30 fps over USB

@@ -17,9 +17,14 @@ on the machine, so the hub (Member C) can compare it with its own time.monotonic
 
 import os
 import threading
+import sys
 import time
 
 import cv2
+
+# Fastest webcam driver for this OS: DirectShow on Windows (the default, Media Foundation,
+# can take 10-30 s to open a USB webcam), V4L2 on Linux / the Pi
+WEBCAM_BACKEND = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_V4L2
 
 
 def open_source(source, width=640, height=480, fps=30, realtime=True):
@@ -49,7 +54,7 @@ class LiveCamera:
         """(Re)open the webcam with our settings. Returns True if it worked."""
         if self.cap is not None:
             self.cap.release()
-        cap = cv2.VideoCapture(self.source, cv2.CAP_V4L2)
+        cap = cv2.VideoCapture(self.source, WEBCAM_BACKEND)
         if not cap.isOpened():
             cap = cv2.VideoCapture(self.source)        # fallback for Windows/macOS testing
         if cap.isOpened():
