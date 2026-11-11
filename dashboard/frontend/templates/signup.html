@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Sign up - SouthpawOS{% endblock %}
+{% block content %}
+<form class="panel auth" method="post" action="{{ url_for('signup') }}">
+  <h2>Sign up</h2>
+  <fieldset class="roles">
+    <legend>I am</legend>
+    <input type="radio" name="role" id="r-athlete" value="athlete" {% if role != 'coach' %}checked{% endif %}>
+    <label for="r-athlete">Athlete</label>
+    <input type="radio" name="role" id="r-coach" value="coach" {% if role == 'coach' %}checked{% endif %}>
+    <label for="r-coach">Coach</label>
+  </fieldset>
+
+  <label for="name">Name shown on the dashboard</label>
+  <input id="name" name="name" type="text" maxlength="16" required value="{{ f.get('name', '') }}">
+  <label for="username">Username</label>
+  <input id="username" name="username" type="text" maxlength="24" autocomplete="username" required value="{{ f.get('username', '') }}">
+  <label for="password">Password (6 characters or more)</label>
+  <input id="password" name="password" type="password" minlength="6" autocomplete="new-password" required>
+  <label for="password2">Password again</label>
+  <input id="password2" name="password2" type="password" minlength="6" autocomplete="new-password" required>
+
+  <div id="coachFields">
+    <label for="gym_name">Your gym's name</label>
+    <input id="gym_name" name="gym_name" type="text" maxlength="32" value="{{ f.get('gym_name', '') }}">
+    <p class="note">This creates the gym. You then get a gym code to give to your athletes.</p>
+  </div>
+
+  <div id="athleteFields">
+    <label for="gym_code">Gym code (from your coach)</label>
+    <input id="gym_code" name="gym_code" type="text" maxlength="12" autocomplete="off" value="{{ f.get('gym_code', '') }}">
+    <label for="card_uid">NFC card ID (optional)</label>
+    <input id="card_uid" name="card_uid" type="text" maxlength="32" autocomplete="off" placeholder="04A2B91C" value="{{ f.get('card_uid', '') }}">
+    <p class="note">Rounds you play after tapping this card are saved to your account. You can add it later from My stats.</p>
+  </div>
+
+  {% if error %}<p class="bad" role="alert">{{ error }}</p>{% endif %}
+  <p><button class="btn" type="submit">Create account</button></p>
+  <p class="note">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+var $ = function (i) { return document.getElementById(i); };
+function showRole() {
+  var coach = document.querySelector('input[name=role]:checked').value === 'coach';
+  $('coachFields').classList.toggle('hidden', !coach);
+  $('athleteFields').classList.toggle('hidden', coach);
+  $('gym_name').required = coach;
+  $('gym_code').required = !coach;
+}
+document.querySelectorAll('input[name=role]').forEach(function (r) { r.onchange = showRole; });
+showRole();
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}SouthpawOS{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% block bodyclass %}{% endblock %}">
+{% set user = g.get('user') %}
+<header class="top">
+  <h1>SouthpawOS</h1>
+  {% if user %}
+  <nav aria-label="Main">
+    <a href="{{ url_for('live') }}" {% if request.endpoint=='live' %}aria-current="page"{% endif %}>Latest round</a>
+    {% if user.role == 'athlete' %}
+    {% set mine = request.endpoint=='player_page' and request.view_args.pid|upper == user.player_id %}
+    <a href="{{ url_for('player_page', pid=user.player_id) }}" {% if mine %}aria-current="page"{% endif %}>My stats</a>
+    {% endif %}
+    <a href="{{ url_for('index') }}" {% if request.endpoint=='index' or (request.endpoint=='player_page' and not mine) %}aria-current="page"{% endif %}>Athletes</a>
+    <a href="{{ url_for('sessions') }}" {% if request.endpoint in ('sessions','session_page') %}aria-current="page"{% endif %}>Sessions</a>
+  </nav>
+  <form class="who-am-i" method="post" action="{{ url_for('logout') }}">
+    <span><b>{{ user.name }}</b> · {{ user.role|capitalize }} · {{ user.gym }}</span>
+    <button type="submit">Log out</button>
+  </form>
+  {% endif %}
+</header>
+{% block body %}<main>{% block content %}{% endblock %}</main>{% endblock %}
+<script>
+/* Local copy first (the venue network may be offline); CDN only as fallback. */
+function loadLib(local, cdn, test) {
+  return new Promise(function (ok) {
+    function add(src, next) {
+      var s = document.createElement('script'); s.src = src;
+      s.onload = ok; s.onerror = next; document.head.appendChild(s);
+    }
+    add(local, function () { add(cdn, ok); });
+  });
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

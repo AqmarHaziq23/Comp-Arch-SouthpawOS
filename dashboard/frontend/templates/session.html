@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Session {{ d.session.id }} - SouthpawOS{% endblock %}
+{% block content %}
+{% set s = d.session %}
+<h2>{{ s.nickname }} <span class="muted" style="font-weight:400">· {{ s.started_at|when }}</span></h2>
+<div class="panel stats" style="margin-bottom:1rem">
+  <div class="stat"><b>{{ s.score }}</b><span>Score</span></div>
+  <div class="stat"><b>{{ s.accuracy }}%</b><span>Accuracy ({{ s.landed }}/{{ s.thrown }} landed)</span></div>
+  <div class="stat"><b>{{ s.thrown }}</b><span>Punches thrown</span></div>
+  {% if rec.avg_rest %}<div class="stat"><b>{{ rec.avg_rest }}</b><span>Avg rest BPM</span></div>{% endif %}
+</div>
+<div class="grid cols-2">
+  <div class="panel"><h3>Rounds</h3>
+    <table><thead><tr><th>Round</th><th class="num">Score</th><th class="num">Thrown</th><th class="num">Landed</th><th class="num">Accuracy</th><th class="num">Combos</th></tr></thead>
+    <tbody>{% for r in d.rounds %}<tr><td>{{ r.round_no }}</td><td class="num">{{ r.score }}</td><td class="num">{{ r.thrown }}</td>
+      <td class="num">{{ r.landed }}</td><td class="num">{{ r.accuracy }}%</td>
+      <td class="num">{% if r.combos_called is not none and r.combos_hit is not none %}{{ r.combos_hit }}/{{ r.combos_called }}{% else %}-{% endif %}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="panel"><h3>Heart-rate recovery between rounds</h3>
+    {% if d.hr %}<div class="chartbox"><canvas id="hr"></canvas></div>
+    <p class="note">Unreliable readings are left out of the chart. Training trend, not a health measurement.</p>
+    {% else %}<p class="empty">No heart-rate readings in this session.</p>{% endif %}
+  </div>
+</div>
+<p style="margin-top:1rem"><a href="{{ url_for('sessions') }}">All sessions</a></p>
+{% endblock %}
+{% block scripts %}
+{% if d.hr %}
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script>
+var H = {{ d.hr|tojson }};
+loadLib("{{ url_for('static', filename='vendor/chart.umd.min.js') }}",
+        "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js").then(function () {
+  if (!chartsReady(['hr'])) return;
+  var labels = H.map(function (h) { return 'After round ' + h.round_no; });
+  drawChart('hr', 'line', labels, [ds('Rest BPM', H.map(function (h) { return h.good ? h.bpm : null; }), COLORS.red)], 'BPM');
+});
+</script>
+{% endif %}
+{% endblock %}
