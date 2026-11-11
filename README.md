@@ -11,8 +11,7 @@ ICT1011 / INF1101 team exploration project, Team P1D.
 | `protocol/` | Message protocol between boards and the Pi (**read this first**) | Haziq (C) |
 | `hub/` | Raspberry Pi hub: BLE, clock sync, fusion, simulator, game loop | Haziq, ZH (C) |
 | `firmware/wrist/` | Forearm boards: punch detection and classification | Yue Ming (A) |
-| `firmware/bag/` | Bag board: screen, impacts, buzzer | B |
-| `firmware/hr_station/` | Wireless heart-rate station: pulse sensor reading between rounds | ZH |
+| `firmware/bag/` | Bag board: screen, impacts, buzzer, pulse sensor | Ying Song, ZH |
 | `vision/` | MediaPipe pose tracking | Johanan (D) |
 | `dashboard/` | Web dashboard and player pages | Jovis (E) |
 | `training/` | Punch classifier training and export | A, C |
