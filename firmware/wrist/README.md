@@ -72,7 +72,11 @@ python plot_accel.py ../data/raw/ym_L_jab_*.csv
 **How to record so the data is useful later:**
 - **One punch type per file.** Throw about **10 punches per file, with 1–2 s of guard between each**, and do 3 files per type (≈30 of each).
 - **Labels:** `jab`, `cross`, `hook`, `uppercut`, plus two kinds of "not a punch": `idle` (guard, bouncing, feints and pull-backs) and `offhand` (the board's arm while the *other* hand punches: the body turn can snap it past the trigger). Both teach the classifier what *not* to count.
-- **Same stance and mounting every time.** Switch the board to the right wrist (`--hand R`) for crosses and rear hooks and uppercuts.
+- **Same stance and mounting every time, for everyone.** The classifier learns which way the axes point, so the board must sit the same way on every person:
+  - on the **back of the wrist**, just behind the wrist joint, held on with a hand wrap or strap;
+  - **screen facing out**, **USB port pointing towards the elbow**;
+  - the same position on either arm. Move it to the rear wrist (`--hand R` for an orthodox boxer) for crosses and rear hooks and uppercuts.
+  - Tape the USB cable at the wrist and above the elbow with slack between, and stand with the laptop on the punching arm's side, so hooks don't pull the plug out.
 - **Record 2–3 teammates** too (`--person ys`, `--person zh`, …), so the classifier isn't tuned only to you.
 - Start shadowboxing. Light bag work comes later.
 - **Plot every file.** A hard punch will spike towards the dotted ±16 g lines. Clipping there is expected; we classify on shape and timing, not peak force.
