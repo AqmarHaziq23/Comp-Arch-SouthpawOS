@@ -1,8 +1,8 @@
 /*
- * Modified by: Yue Ming (Team P1D) – runs the decision tree exported by
+ * Modified by: Yue Ming (Team P1D) – runs the model (random forest) exported by
  *   training/tools/train_classifier.py --export (original file).
  *
- * The tree itself is generated C in classifier_model.c (scikit-learn tree -> m2cgen).
+ * The model itself is generated C in classifier_model.c (scikit-learn forest -> m2cgen).
  * This file builds its input from PunchFeatures, picks the most likely class and turns
  * the letter into a PunchType. Python's train_classifier.py predicts the same way:
  * the first largest output wins.

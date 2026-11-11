@@ -1,6 +1,6 @@
 /*
  * SouthpawOS wrist board: sample the accelerometer, detect punches, classify them
- * with the decision tree from train_classifier.py, send them over BLE and show the status on the TinyScreen+.
+ * with the random forest from train_classifier.py, send them over BLE and show the status on the TinyScreen+.
  *
  * Based on: Accelerometer TinyShield example by Laverena Wienclaw for TinyCircuits,
  *   https://learn.tinycircuits.com/Sensors/Accelerometer_TinyShield_Tutorial/
