@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Union
 
-PROTOCOL_VERSION = "1.1"
+PROTOCOL_VERSION = "1.3"
 MAX_BLE_PAYLOAD = 20  # bytes per BLE packet, including the trailing "\n"
 
 # Nordic UART Service, as set up by the TinyCircuits STBLE UART example.
@@ -17,7 +17,8 @@ NUS_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"  # board -> Pi (notify)
 NUS_RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"  # Pi -> board (write)
 
 HANDS = ("L", "R")
-PUNCH_CODES = {"J": "JAB", "C": "CROSS", "H": "HOOK", "U": "UPPERCUT"}
+PUNCH_CODES = {"J": "JAB", "C": "CROSS", "H": "HOOK", "U": "UPPERCUT", "X": "UNKNOWN"}
+UNKNOWN = "X"  # punch detected, type not classified
 PUNCH_NAMES = {name: code for code, name in PUNCH_CODES.items()}
 SOUNDS = ("BELL", "WARN", "HIT", "MISS")
 MODES = ("ROUND", "REST", "SUMMARY")
@@ -43,7 +44,7 @@ class ProtocolError(ValueError):
 @dataclass(frozen=True)
 class Punch:
     hand: str  # "L" or "R"
-    type: str  # punch code: J, C, H or U
+    type: str  # punch code: J, C, H, U, or X if unknown
     board_ms: int
     peak_g: int
 

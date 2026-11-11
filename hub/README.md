@@ -52,6 +52,35 @@ because it doesn't answer `T`. Real firmware must.
 In `ble` mode the hub also listens on UDP `127.0.0.1:5005` for vision events
 and `:5006` for NFC taps (see `protocol/PROTOCOL.md`).
 
+## Database (players and scores)
+
+Every `sim` or `ble` game is saved to `hub/southpaw.db` (SQLite, gitignored).
+The session logs keep every raw message; the database keeps the summaries.
+
+```bash
+python -m southpaw leaderboard                 # best score per player (real games only)
+python -m southpaw leaderboard --include-sim   # include simulator runs
+python -m southpaw player 04A2B91C "Yue Ming"  # name an NFC card
+```
+
+Add `--no-db` to `sim` or `ble` to skip saving, or `--db other.db` to use
+another file.
+
+| Table | What's in it |
+|-------|--------------|
+| `players` | NFC card UID, name, stance. `guest` is used when nobody taps a card |
+| `sessions` | Player, `ble`/`sim`/`replay`, start and end time, total score |
+| `punches` | Session, round, hand, type (`J/C/H/U/X`), peak g, landed, impact strength, camera's type |
+| `heart_rates` | Session, round, BPM and whether the reading was good, one per rest |
+
+- **NFC (ZH):** send `{"uid": "04A2B91C"}` to UDP port 5006 before a game.
+  The next session is saved under that card. Unknown cards are added
+  automatically as "Player B91C" and can be renamed later.
+- **Dashboard (Jovis):** only the hub writes. Open the file read-only so you
+  can't lock it: `sqlite3.connect("file:southpaw.db?mode=ro", uri=True)`.
+  `Store.leaderboard()` and `Store.session_summary(id)` in `southpaw/db.py`
+  show the queries.
+
 ## Code map
 
 | File | What it does |
@@ -62,6 +91,7 @@ and `:5006` for NFC taps (see `protocol/PROTOCOL.md`).
 | `southpaw/sim.py` | Fake wrist, bag and camera, including a simulated player |
 | `southpaw/ble.py` | Real BLE connections via bleak, with auto-reconnect |
 | `southpaw/hub.py` | Glues it together, logs sessions, and has a demo game loop |
+| `southpaw/db.py` | SQLite store: players, sessions, punches, heart rates, leaderboard |
 
 ## For the rest of the team
 

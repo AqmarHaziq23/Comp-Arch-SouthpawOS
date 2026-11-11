@@ -1,8 +1,9 @@
 # Copy to boards.toml and fill in the addresses from `python -m southpaw scan`.
-# Every TinyCircuits BLE shield advertises as "BlueNRG"; power them on one at
-# a time to tell which address is which, then label the boards.
+# Boards are matched by address only; the advertised name is ignored (it may be
+# "BlueNRG" or something like "P1D-WRIST-L"). A board keeps the same address
+# across power cycles. Power them on one at a time to tell which is which, then
+# label the boards.
 [boards]
 wristL = "XX:XX:XX:XX:XX:01"
 wristR = "XX:XX:XX:XX:XX:02"
 bag    = "XX:XX:XX:XX:XX:03"
-hr     = "XX:XX:XX:XX:XX:04"

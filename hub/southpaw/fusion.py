@@ -8,17 +8,23 @@ Rules (tune on real hardware):
 - Vision is a second opinion. It never decides "landed" on its own, so the game
   works the same with the camera off. Its punch type and contact are recorded
   next to the wrist's so you can see how often they agree.
+- If the wrist sends X (type unknown), the camera's type is used when there
+  is one. Otherwise the punch stays X: it can land, but never matches a call.
 - A punch is only resolved once its window has fully passed, so late events
-  (vision especially) still get a chance to match.
+  (vision especially) still get a chance to match. Wrist punches themselves
+  arrive ~250-310 ms after the peak, which WRIST_LATENCY covers.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .protocol import UNKNOWN
+
 IMPACT_WINDOW = 0.150  # s, wrist punch <-> bag impact
 VISION_WINDOW = 0.300  # s, wrist punch <-> vision frame (camera is slower)
 VISION_LATENCY = 0.400  # s, how long to wait for vision events to arrive
+WRIST_LATENCY = 0.400  # s, punch message arrives ~250-310 ms after the peak
 STALE_IMPACT = 1.0  # s, unmatched impacts older than this are dropped
 
 
@@ -49,7 +55,7 @@ class VisionEvent:
 class FusedPunch:
     t: float
     hand: str
-    type: str  # the wrist's classification (primary)
+    type: str  # the wrist's classification, or the camera's if the wrist sent X
     peak_g: int
     landed: bool
     impact_strength: int | None = None
@@ -57,10 +63,14 @@ class FusedPunch:
     vision_type: str | None = None
     vision_contact: bool | None = None
     vision_conf: float | None = None
+    wrist_type: str | None = None  # what the wrist sent, if it differs from type
 
     @property
     def vision_agrees(self) -> bool | None:
-        return None if self.vision_type is None else self.vision_type == self.type
+        wrist = self.wrist_type or self.type
+        if self.vision_type is None or wrist == UNKNOWN:
+            return None
+        return self.vision_type == wrist
 
 
 @dataclass
@@ -69,6 +79,7 @@ class Fuser:
     impact_window: float = IMPACT_WINDOW
     vision_window: float = VISION_WINDOW
     vision_latency: float = VISION_LATENCY
+    wrist_latency: float = WRIST_LATENCY
     unmatched_impacts: int = 0
     _punches: list[PunchEvent] = field(default_factory=list)
     _impacts: list[ImpactEvent] = field(default_factory=list)
@@ -85,7 +96,9 @@ class Fuser:
             self._vision.append(e)
 
     def _wait(self) -> float:
-        w = self.impact_window
+        # Impacts arrive fast, so the slowest thing to wait for is the punch
+        # message itself, or the camera when it's on.
+        w = self.impact_window + self.wrist_latency
         if self.use_vision:
             w = max(w, self.vision_window + self.vision_latency)
         return w
@@ -104,11 +117,15 @@ class Fuser:
             )
             if vision is not None:
                 self._vision.remove(vision)
+            final_type = p.type
+            if p.type == UNKNOWN and vision is not None and vision.type != UNKNOWN:
+                final_type = vision.type
             out.append(
                 FusedPunch(
                     t=p.t,
                     hand=p.hand,
-                    type=p.type,
+                    type=final_type,
+                    wrist_type=p.type if final_type != p.type else None,
                     peak_g=p.peak_g,
                     landed=impact is not None,
                     impact_strength=impact.strength if impact else None,
