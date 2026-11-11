@@ -19,3 +19,4 @@ tutorial, and put a credit comment at the top of the file that uses it.
 | `training/tools/ble_listen.py` | bleak example `uart_service.py` | MIT | https://github.com/hbldh/bleak | Yue Ming |
 | `training/tools/` (dependency) | bleak BLE library | MIT | https://github.com/hbldh/bleak | Yue Ming |
 | `training/tools/` (dependency) | scikit-learn (`DecisionTreeClassifier`, `export_text`) | BSD-3-Clause | https://scikit-learn.org | Yue Ming |
+| `training/tools/train_classifier.py` (dependency) → `firmware/wrist/southpaw_wrist/classifier_model.c` | m2cgen 0.10.0 (decision tree → C code) | MIT | https://github.com/BayesWitnesses/m2cgen | Yue Ming |

@@ -1,26 +1,44 @@
 /*
- * Modified by: Yue Ming (Team P1D) – punch classifier, a stub until there is labelled data (original file).
+ * Modified by: Yue Ming (Team P1D) – runs the decision tree exported by
+ *   training/tools/train_classifier.py --export (original file).
+ *
+ * The tree itself is generated C in classifier_model.c (scikit-learn tree -> m2cgen).
+ * This file builds its input from PunchFeatures, picks the most likely class and turns
+ * the letter into a PunchType. Python's train_classifier.py predicts the same way:
+ * the first largest output wins.
  */
 #include "config.h"
 #include "classifier.h"
+#include "classifier_model.h"
+
+#if HAND == 'L'
+  #define CLASSIFIER_SCORE classifier_score_L
+  #define CLASSIFIER_CLASSES CLASSIFIER_CLASSES_L
+#else
+  #define CLASSIFIER_SCORE classifier_score_R
+  #define CLASSIFIER_CLASSES CLASSIFIER_CLASSES_R
+#endif
+
+static PunchType fromCode(char c) {
+  switch (c) {
+    case 'J': return PUNCH_JAB;
+    case 'C': return PUNCH_CROSS;
+    case 'H': return PUNCH_HOOK;
+    case 'U': return PUNCH_UPPERCUT;
+    case 'N': return PUNCH_NONE;
+    default: return PUNCH_UNKNOWN;
+  }
+}
 
 PunchType classify(const PunchFeatures& f) {
-  (void)f;
-
-  // ===== Yue Ming's rules go here =========================================
-  // Pick the thresholds from training/data/features.csv (written by
-  // training/tools/segment_punches.py); its columns are the PunchFeatures
-  // fields. The shape will be something like:
-  //
-  //   if (f.tiltChange > TILT_HOOK && f.burstMs > BURST_HOOK_MS) return PUNCH_HOOK;
-  //   if (f.domAxis == UPPERCUT_AXIS && f.domSign == UPPERCUT_SIGN) return PUNCH_UPPERCUT;
-  //   return straight punch: JAB or CROSS depending on HAND and stance
-  //
-  // Put the thresholds in config.h. Later the exported decision tree
-  // (micromlgen or m2cgen) can replace the body of this function.
-  // ========================================================================
-
-  return PUNCH_UNKNOWN;
+  double input[CLASSIFIER_N_INPUTS] = CLASSIFIER_INPUTS(f);
+  double out[CLASSIFIER_N_CLASSES];
+  CLASSIFIER_SCORE(input, out);
+  uint8_t best = 0;
+  for (uint8_t i = 1; i < CLASSIFIER_N_CLASSES; i++) {
+    if (out[i] > out[best]) best = i;      // strictly larger: the first largest wins, as in scikit-learn
+  }
+  return fromCode(CLASSIFIER_CLASSES[best]);
 }
 
 char punch_code(PunchType t) {
@@ -29,6 +47,7 @@ char punch_code(PunchType t) {
     case PUNCH_CROSS: return 'C';
     case PUNCH_HOOK: return 'H';
     case PUNCH_UPPERCUT: return 'U';
+    case PUNCH_NONE: return 'N';
     default: return 'X';
   }
 }
@@ -39,6 +58,7 @@ const char* punch_name(PunchType t) {
     case PUNCH_CROSS: return "CROSS";
     case PUNCH_HOOK: return "HOOK";
     case PUNCH_UPPERCUT: return "UPPERCUT";
+    case PUNCH_NONE: return "NONE";
     default: return "UNKNOWN";
   }
 }

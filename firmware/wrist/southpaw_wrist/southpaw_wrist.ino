@@ -1,6 +1,6 @@
 /*
  * SouthpawOS wrist board: sample the accelerometer, detect punches, classify them
- * (stub for now) and show the status on the TinyScreen+.
+ * with the decision tree from train_classifier.py, send them over BLE and show the status on the TinyScreen+.
  *
  * Based on: Accelerometer TinyShield example by Laverena Wienclaw for TinyCircuits,
  *   https://learn.tinycircuits.com/Sensors/Accelerometer_TinyShield_Tutorial/
@@ -32,6 +32,7 @@ static Sample window[WINDOW_LEN];
 static uint32_t punchCount = 0;
 static uint32_t windowsLost = 0;        // detector fired but the ring no longer had the samples
 static uint32_t knocksIgnored = 0;      // bursts shorter than MIN_BURST_MS
+static uint32_t notPunches = 0;         // windows the classifier called "not a punch"
 static uint32_t lastStatsMs = 0;
 static uint32_t lastBatteryMs = 0;
 static uint32_t maxWorkUs = 0;          // longest loop pass that handled a sample
@@ -134,6 +135,12 @@ static void handlePunch(const DetectorEvent& ev) {
     return;
   }
   PunchType t = classify(f);
+  if (t == PUNCH_NONE) {                  // e.g. this arm moving while the other hand punches
+    notPunches++;
+    if (usbOpen()) printPunch(f, t);      // type=N; nothing is sent over BLE, the screen keeps the last punch
+    punchHandled = true;
+    return;
+  }
   punchCount++;
   display_set_punch(t, punchCount, f.peakG);
 
@@ -223,6 +230,7 @@ static void housekeeping(uint32_t nowMs) {
       p = putStr(p, " punches=");          p = putInt(p, (int32_t)punchCount);
       p = putStr(p, " dropped=");          p = putInt(p, (int32_t)(detector_dropped() + windowsLost));
       p = putStr(p, " knocks=");           p = putInt(p, (int32_t)knocksIgnored);
+      p = putStr(p, " not_punch=");        p = putInt(p, (int32_t)notPunches);
       p = putStr(p, " batt_cv=");          p = putInt(p, batteryCv);
       p = putStr(p, lastSensorOk ? " sensor=ok\r\n" : " sensor=missing\r\n");
       SerialMonitorInterface.write((const uint8_t*)line, (size_t)(p - line));
