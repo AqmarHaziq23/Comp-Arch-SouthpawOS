@@ -175,10 +175,17 @@ async def run_demo(
     stance: str = "orthodox",
     seed: int | None = None,
     printer: Callable[[str], None] = print,
+    store=None,
+    source: str = "sim",
 ) -> list[dict]:
-    """Minimal rounds -> combos -> rest loop to prove the pipeline end to end."""
+    """Minimal rounds -> combos -> rest loop to prove the pipeline end to end.
+
+    If a `db.Store` is passed, the session, every punch and each rest's heart
+    rate are saved to it.
+    """
     rng = random.Random(seed)
     results = []
+    session_id = store.start_session(hub.player_uid, source) if store else None
     for rnd in range(1, rounds + 1):
         printer(f"\n=== Round {rnd} ===")
         await hub.send("bag", proto.mode_msg("ROUND"))
@@ -189,6 +196,8 @@ async def run_demo(
             await hub.send("bag", proto.combo_msg(combo))
             await asyncio.sleep(combo_time)
             thrown = hub.resolve(flush=True)
+            if store:
+                store.add_punches(session_id, rnd, thrown)
             s = score_combo(expected, thrown)
             s["round"], s["combo"] = rnd, combo
             results.append(s)
@@ -200,11 +209,16 @@ async def run_demo(
                 f"correct {s['correct']}/{s['called']}  landed {s['landed']}  +{s['points']}"
             )
         await hub.send("bag", proto.mode_msg("REST"))
+        readings_before = len(hub.heart_rates)
         await asyncio.sleep(rest_time)
-        if hub.heart_rates:
+        if len(hub.heart_rates) > readings_before:  # only readings from this rest
             _, bpm, good = hub.heart_rates[-1]
             printer(f"rest: heart rate {bpm} bpm{'' if good else ' (unreliable)'}")
+            if store:
+                store.add_heart_rate(session_id, rnd, bpm, good)
     await hub.send("bag", proto.mode_msg("SUMMARY"))
     total = sum(r["points"] for r in results)
+    if store:
+        store.end_session(session_id, total)
     printer(f"\nTotal: {total} points   (* = landed)   unmatched bag impacts: {hub.fuser.unmatched_impacts}")
     return results
