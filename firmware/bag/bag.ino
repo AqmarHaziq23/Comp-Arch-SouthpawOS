@@ -45,6 +45,15 @@
     5. High score (most punches, hardest hit, longest combo) is kept in
        flash and survives power-off. "NEW RECORD!" when beaten.
 
+  Hub mode (BLE, protocol/PROTOCOL.md):
+    The board advertises as P1D-BAG. When the Pi hub connects and sends a
+    command, the bag switches to hub mode: the hub runs the game, the
+    screen shows the called combo, the hub's S,* sounds play, and every
+    hit is sent as I,<millis at the peak>,<strength 0-100>. If the hub
+    disconnects, the bag goes back to the standalone game below.
+    BLE code: ble.cpp / ble.h (TinyCircuits STBLE UARTPassThrough example,
+    adapted by Yue Ming for the wrists and by Haziq for the bag).
+
   Buttons:
     Start screen : any button = start
                    hold LOWER-LEFT 3 s = clear the high score
@@ -70,6 +79,7 @@
 #include <FlashStorage.h>
 #include <Wireling.h>
 #include "BMA250.h"
+#include "ble.h"
 
 // ------------------------- user settings ---------------------------
 #define USE_WIRELING        0      // 1 = Accelerometer Wireling via adapter
@@ -123,6 +133,10 @@ const float    VIB_FULLSCALE_G = 1.50;  // movement bar is full at this level
 const float    SOLID_RATIO     = 4.0;
 const float    POWER_RATIO     = 6.5;
 const uint32_t COMBO_GAP_MS    = 600;   // punches closer than this = combo
+
+// Hub mode
+const float    HUB_FULL_SCALE_G = 8.0;    // impact strength 100 = this many g (the accelerometer range)
+const uint32_t HUB_FLASH_MS     = 200;    // hit counter flashes this long
 
 // Results
 const uint32_t RESULT_PAGE_MS    = 4000;   // auto-rotate results pages
@@ -215,7 +229,7 @@ HighScore hs;
 TinyScreen display = TinyScreen(TinyScreenPlus);
 BMA250 accel;
 
-enum State { ST_IDLE, ST_SETTLE, ST_CALIBRATE, ST_COUNTDOWN, ST_RECORD, ST_RESULTS };
+enum State { ST_IDLE, ST_SETTLE, ST_CALIBRATE, ST_COUNTDOWN, ST_RECORD, ST_RESULTS, ST_HUB };
 State state = ST_IDLE;
 
 struct PunchRecord {
@@ -232,6 +246,7 @@ float noiseG = 0, threshold = PUNCH_MIN_G, activeLevel = ACTIVE_MIN_G;
 bool  inPeak = false, armed = true;
 float peakG = 0;
 uint32_t peakStartMs = 0, lastPunchEndMs = 0;
+uint32_t peakAtMs = 0;             // when the strongest sample of the current hit was read
 
 // session statistics
 uint32_t sessionStartMs = 0;
@@ -441,7 +456,7 @@ void audioStep() {
 // delay() that keeps the buzzer running
 void waitMs(uint32_t ms) {
   uint32_t t0 = millis();
-  while (millis() - t0 < ms) audioStep();
+  while (millis() - t0 < ms) { audioStep(); ble_poll(); }
 }
 
 bool warnPlayed = false;        // WARN already sounded this round
@@ -1016,10 +1031,11 @@ bool detectHit(uint32_t now, float dyn) {
       inPeak = true;
       armed = false;
       peakStartMs = now;
+      peakAtMs = now;
       peakG = dyn;
     }
   } else {
-    if (dyn > peakG) peakG = dyn;
+    if (dyn > peakG) { peakG = dyn; peakAtMs = now; }
     if (dyn < threshold * RELEASE_RATIO || (now - peakStartMs) >= PEAK_MAX_MS) {
       inPeak = false;
       lastPunchEndMs = now;
@@ -1052,6 +1068,145 @@ bool startHitsTimedOut(uint32_t now) {
   return false;
 }
 
+// ------------------------- hub mode (BLE) --------------------------
+bool     bleOk = false;              // the BLE TinyShield answered in setup()
+bool     bleWasConnected = false;
+char     hubCombo[BLE_MAX_MSG + 1] = "";   // e.g. "1-2-3"
+char     hubMode[8] = "ROUND";       // ROUND, REST or SUMMARY
+uint16_t hubHits = 0;                // hits sent this hub session
+uint32_t hubFlashUntilMs = 0;
+bool     hubFlashing = false;
+
+// Append an unsigned number as decimal digits. Returns the new end.
+char *putUint(char *p, uint32_t v) {
+  char d[10];
+  uint8_t n = 0;
+  do { d[n++] = (char)('0' + v % 10); v /= 10; } while (v);
+  while (n) *p++ = d[--n];
+  return p;
+}
+
+// I,<board ms at the peak>,<strength 0-100>
+void sendImpact(uint32_t atMs, float g) {
+  int strength = (int)(g / HUB_FULL_SCALE_G * 100.0f + 0.5f);
+  if (strength < 0) strength = 0;
+  if (strength > 100) strength = 100;
+  char msg[BLE_MAX_MSG];
+  char *p = msg;
+  *p++ = 'I'; *p++ = ',';
+  p = putUint(p, atMs);
+  *p++ = ',';
+  p = putUint(p, (uint32_t)strength);
+  *p++ = '\n';
+  ble_queue_line(msg, (uint8_t)(p - msg));
+}
+
+// H,<bpm>,<1|0>  -- call this from the pulse sensor code once it's added
+void sendHeartRate(uint16_t bpm, bool good) {
+  if (!ble_connected()) return;
+  char msg[BLE_MAX_MSG];
+  char *p = msg;
+  *p++ = 'H'; *p++ = ',';
+  p = putUint(p, bpm);
+  *p++ = ',';
+  *p++ = good ? '1' : '0';
+  *p++ = '\n';
+  ble_queue_line(msg, (uint8_t)(p - msg));
+}
+
+const char *punchName(char n) {
+  switch (n) {
+    case '1': return "JAB";
+    case '2': return "CROSS";
+    case '3': return "L HOOK";
+    case '4': return "R HOOK";
+    case '5': return "L UPPER";
+    case '6': return "R UPPER";
+  }
+  return "";
+}
+
+void drawHubHits(bool flash) {
+  char buf[12];
+  snprintf(buf, sizeof(buf), "hits %u", hubHits);
+  display.drawRect(0, 54, 96, 10, TSRectangleFilled, C_BLACK);
+  printCentered(buf, 54, liberationSans_8ptFontInfo, flash ? C_YELLOW : C_GRAY, C_BLACK);
+}
+
+void showHub() {
+  display.clearScreen();
+  if (strcmp(hubMode, "REST") == 0) {
+    printCentered("REST", 6, liberationSans_16ptFontInfo, C_CYAN, C_BLACK);
+    printCentered("finger on the", 32, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    printCentered("pulse sensor", 43, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    return;
+  }
+  if (strcmp(hubMode, "SUMMARY") == 0) {
+    printCentered("DONE!", 6, liberationSans_16ptFontInfo, C_GREEN, C_BLACK);
+    printCentered("see the dashboard", 34, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    drawHubHits(false);
+    return;
+  }
+  // ROUND: the called combo, big, with the punch names under it
+  if (hubCombo[0]) {
+    printCentered(hubCombo, 2, liberationSans_16ptFontInfo, C_YELLOW, C_BLACK);
+    char names[3][10] = {"", "", ""};
+    uint8_t k = 0;
+    for (const char *c = hubCombo; *c && k < 6; c++) {
+      if (*c >= '1' && *c <= '6') {
+        if (k < 3) strncpy(names[k], punchName(*c), sizeof(names[k]) - 1);
+        k++;
+      }
+    }
+    for (uint8_t i = 0; i < 3 && names[i][0]; i++)
+      printCentered(names[i], 22 + i * 10, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    if (k > 3) printCentered("...", 52, liberationSans_8ptFontInfo, C_GRAY, C_BLACK);
+  } else {
+    printCentered("ROUND", 6, liberationSans_16ptFontInfo, C_GREEN, C_BLACK);
+    printCentered("wait for the combo", 34, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+  }
+  drawHubHits(false);
+}
+
+void enterHub() {
+  if (state == ST_HUB) return;
+  musicStop();
+  state = ST_HUB;
+  hubHits = 0;
+  hubCombo[0] = '\0';
+  inPeak = false; armed = true;
+  SerialMonitorInterface.println(F("Hub mode: the Pi is running the game"));
+}
+
+// One command line from the Pi (without '\n').
+void handleHubLine(const char *line) {
+  if (line[0] == 'C' && line[1] == ',') {
+    enterHub();
+    strncpy(hubCombo, line + 2, sizeof(hubCombo) - 1);
+    hubCombo[sizeof(hubCombo) - 1] = '\0';
+    strcpy(hubMode, "ROUND");
+    playSfx(SFX_CUE);
+    showHub();
+  } else if (line[0] == 'S' && line[1] == ',') {
+    const char *n = line + 2;
+    if      (strcmp(n, "BELL") == 0) playSfx(SFX_BELL);
+    else if (strcmp(n, "WARN") == 0) playSfx(SFX_WARN);
+    else if (strcmp(n, "HIT")  == 0) playSfx(SFX_HIT);
+    else if (strcmp(n, "MISS") == 0) playSfx(SFX_MISS);
+  } else if (line[0] == 'M' && line[1] == ',') {
+    const char *m = line + 2;
+    if (strcmp(m, "ROUND") == 0 || strcmp(m, "REST") == 0 || strcmp(m, "SUMMARY") == 0) {
+      enterHub();
+      strncpy(hubMode, m, sizeof(hubMode) - 1);
+      hubMode[sizeof(hubMode) - 1] = '\0';
+      if (strcmp(m, "ROUND") == 0) hubCombo[0] = '\0';
+      showHub();
+    }
+  }
+  SerialMonitorInterface.print(F("from hub: "));
+  SerialMonitorInterface.println(line);
+}
+
 // ------------------------- setup / loop ----------------------------
 void setup() {
   SerialMonitorInterface.begin(115200);
@@ -1067,6 +1222,16 @@ void setup() {
   display.setBitDepth(TSBitDepth8);
 
   loadHighScore();
+
+  bleOk = ble_begin();
+  if (bleOk) {
+    char addr[18];
+    ble_address(addr);
+    SerialMonitorInterface.print(F("BLE ready as P1D-BAG, address "));
+    SerialMonitorInterface.println(addr);
+  } else {
+    SerialMonitorInterface.println(F("BLE TinyShield not found: standalone game only"));
+  }
 
   while (accel.begin(ACCEL_RANGE, BMA250_update_time_8ms) != 0) {
     SerialMonitorInterface.println(F("ERROR: no BMA250 detected"));
@@ -1089,8 +1254,21 @@ void setup() {
 }
 
 void loop() {
+  ble_poll();                         // every pass, so T pings are answered straight away
   audioStep();                        // keeps the song / game sounds going
   uint32_t now = millis();
+
+  // commands from the hub (C, S, M)
+  char line[BLE_MAX_MSG + 1];
+  while (ble_take_line(line)) handleHubLine(line);
+
+  // hub gone: back to the standalone game
+  bool bleNow = ble_connected();
+  if (bleNow != bleWasConnected) {
+    bleWasConnected = bleNow;
+    SerialMonitorInterface.println(bleNow ? F("Hub connected") : F("Hub disconnected"));
+    if (!bleNow && state == ST_HUB) goIdle();
+  }
 
   // button edge detection
   uint8_t btn = display.getButtons();
@@ -1213,6 +1391,29 @@ void loop() {
       } else if (now - lastUiMs >= UI_INTERVAL_MS) {
         drawRecordDynamic(now);
         lastUiMs = now;
+      }
+      break;
+
+    case ST_HUB:
+      // the hub runs the game: just report every hit
+      if (sampleReady) {
+        float dyn = processSample(x, y, z, !inPeak);
+        if (detectHit(now, dyn)) {
+          sendImpact(peakAtMs, peakG);
+          hubHits++;
+          SerialMonitorInterface.print(F("HIT sent, peak="));
+          SerialMonitorInterface.print(peakG, 2);
+          SerialMonitorInterface.println(F("g"));
+          if (strcmp(hubMode, "ROUND") == 0) {
+            drawHubHits(true);
+            hubFlashing = true;
+            hubFlashUntilMs = now + HUB_FLASH_MS;
+          }
+        }
+      }
+      if (hubFlashing && (int32_t)(now - hubFlashUntilMs) >= 0) {
+        hubFlashing = false;
+        if (strcmp(hubMode, "ROUND") == 0) drawHubHits(false);
       }
       break;
 
