@@ -71,7 +71,7 @@ python plot_accel.py ../data/raw/ym_L_jab_*.csv
 
 **How to record so the data is useful later:**
 - **One punch type per file.** Throw about **10 punches per file, with 1–2 s of guard between each**, and do 3 files per type (≈30 of each).
-- **Labels:** `jab`, `cross`, `hook`, `uppercut`, plus `idle` (guard, shuffling, no punches). The idle file teaches the detector what *not* to trigger on.
+- **Labels:** `jab`, `cross`, `hook`, `uppercut`, plus two kinds of "not a punch": `idle` (guard, bouncing, feints and pull-backs) and `offhand` (the board's arm while the *other* hand punches: the body turn can snap it past the trigger). Both teach the classifier what *not* to count.
 - **Same stance and mounting every time.** Switch the board to the right wrist (`--hand R`) for crosses and rear hooks and uppercuts.
 - **Record 2–3 teammates** too (`--person ys`, `--person zh`, …), so the classifier isn't tuned only to you.
 - Start shadowboxing. Light bag work comes later.
@@ -146,7 +146,7 @@ USB (Serial Monitor at 115200, or any program that opens the port):
 | Constant | Default | Meaning |
 |---|---|---|
 | `DETECT_THRESHOLD_COUNTS` | 96 (3 g) | Trigger when total acceleration rises to this (gravity included). **Starting guess: tune with recordings.** |
-| `PEAK_SEARCH_MS` | 100 | After a trigger, the peak is the largest sample in this time. |
+| `PEAK_SEARCH_MS` | 150 | After a trigger, the peak is the largest sample in this time. 100 missed the real snap when a slow wind-up set off the trigger first. |
 | `COOLDOWN_MS` | 400 | No new trigger until this long after the peak. 300 double-counted: a punch's stop/retract burst came up to 250 ms after the peak. |
 | `WINDOW_PRE_MS` / `WINDOW_POST_MS` | 150 / 250 | Samples handed to the features step, around the peak. The punch message goes out about `WINDOW_POST_MS` after the peak. |
 | `MIN_BURST_MS` | 20 | Shorter bursts are knocks (putting the board down), not punches. |
