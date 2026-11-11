@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem">
+  <h2>{{ g.user.gym }} <span class="muted" style="font-weight:400">· athletes</span></h2>
+  {% if g.user.role == 'coach' %}<p style="margin:0">Gym code <span class="tag" style="font-family:var(--mono);font-size:1rem">{{ g.user.gym_code }}</span></p>{% endif %}
+</div>
+{% if board %}
+<div class="panel">
+<table>
+  <thead><tr><th>Athlete</th><th class="num">Best score</th><th class="num">Accuracy</th><th class="num">Sessions</th></tr></thead>
+  <tbody>
+  {% for r in board %}
+  <tr class="link"><td><a href="{{ url_for('player_page', pid=r.id) }}"><b>{{ r.nickname }}</b></a>{% if r.id == g.user.player_id %} <span class="tag">you</span>{% endif %}</td>
+    <td class="num">{{ r.best_score }}</td>
+    <td class="num">{{ r.accuracy }}%</td><td class="num">{{ r.sessions }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="panel empty"><p>No athletes in this gym yet.</p></div>
+{% endif %}
+{% if g.user.role == 'coach' %}<p class="note">Athletes join this gym by signing up with the gym code. You only see athletes of this gym.</p>{% endif %}
+{% endblock %}

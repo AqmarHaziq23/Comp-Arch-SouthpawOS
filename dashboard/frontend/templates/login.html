@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Log in - SouthpawOS{% endblock %}
+{% block content %}
+<form class="panel auth" method="post" action="{{ url_for('login') }}">
+  <h2>Log in</h2>
+  <fieldset class="roles">
+    <legend>I am</legend>
+    <input type="radio" name="role" id="r-athlete" value="athlete" {% if role != 'coach' %}checked{% endif %}>
+    <label for="r-athlete">Athlete</label>
+    <input type="radio" name="role" id="r-coach" value="coach" {% if role == 'coach' %}checked{% endif %}>
+    <label for="r-coach">Coach</label>
+  </fieldset>
+  <p class="note" id="roleNote"></p>
+
+  <label for="username">Username</label>
+  <input id="username" name="username" type="text" autocomplete="username" required autofocus value="{{ f.get('username', '') }}">
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+  {% if error %}<p class="bad" role="alert">{{ error }}</p>{% endif %}
+  <p><button class="btn" type="submit">Log in</button></p>
+  <p class="note">No account yet? <a href="{{ url_for('signup') }}">Sign up</a></p>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+var NOTES = {athlete: 'See your own stats and the athletes in your gym.',
+             coach: 'See the athletes in your gym.'};
+function showRole() {
+  document.getElementById('roleNote').textContent = NOTES[document.querySelector('input[name=role]:checked').value];
+}
+document.querySelectorAll('input[name=role]').forEach(function (r) { r.onchange = showRole; });
+showRole();
+</script>
+{% endblock %}

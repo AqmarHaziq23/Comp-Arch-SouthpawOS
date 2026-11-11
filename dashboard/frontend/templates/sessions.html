@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Session history</h2>
+{% if rows %}
+<div class="panel"><table>
+  <thead><tr><th>When</th><th>Player</th><th class="num">Score</th><th class="num">Accuracy</th><th class="num">Thrown</th><th class="num">Landed</th></tr></thead>
+  <tbody>{% for s in rows %}
+  <tr class="link"><td><a href="{{ url_for('session_page', sid=s.id) }}">{{ s.started_at|when }}</a></td>
+    <td>{{ s.nickname }}</td><td class="num">{{ s.score }}</td><td class="num">{{ s.accuracy }}%</td>
+    <td class="num">{{ s.thrown }}</td><td class="num">{{ s.landed }}</td></tr>
+  {% endfor %}</tbody></table></div>
+{% else %}<div class="panel empty">No sessions yet.</div>{% endif %}
+{% endblock %}
