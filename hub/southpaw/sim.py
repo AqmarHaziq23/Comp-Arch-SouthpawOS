@@ -18,7 +18,7 @@ from typing import Awaitable, Callable
 from . import protocol as proto
 
 OnLine = Callable[[str, str, float], Awaitable[None]]
-BOARDS = ("wristL", "wristR", "bag", "hr")
+BOARDS = ("wristL", "wristR", "bag")
 
 
 @dataclass
@@ -34,7 +34,7 @@ class SimConfig:
     wrist_delay: tuple[float, float] = (0.25, 0.31)  # s, wrist waits for samples after the peak
     vision_latency: tuple[float, float] = (0.12, 0.30)  # s
     rest_bpm: tuple[int, int] = (150, 175)  # first rest; drops each round
-    hr_delay: float = 2.0  # s from M,REST until the player is on the HR station
+    hr_delay: float = 2.0  # s from M,REST until the player has a finger on the pulse sensor
     seed: int | None = None
 
 
@@ -69,7 +69,6 @@ class Simulator:
         elif board == "bag" and line.startswith("C,"):
             self._later(0, self._throw(proto.parse_combo(line)))
         elif board == "bag" and line == "M,REST":
-            # The player walks over to the heart-rate station during the rest.
             self._later(self.cfg.hr_delay, self._heart_rate())
         # S,* and other M,* commands only change sound/screen on a real board.
 
@@ -149,4 +148,4 @@ class Simulator:
         bpm = self.rng.randint(lo, hi) - 8 * self._rests  # recovers a bit each round
         self._rests += 1
         good = "1" if self.rng.random() < 0.85 else "0"
-        await self._deliver("hr", f"H,{max(bpm, 70)},{good}", self._lat())
+        await self._deliver("bag", f"H,{max(bpm, 70)},{good}", self._lat())

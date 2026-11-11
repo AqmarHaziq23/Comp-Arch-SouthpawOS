@@ -63,7 +63,7 @@ def test_demo_saves_session_to_database(tmp_path, store):
             await hub.sync_clock(board, pings=2)
 
         runner = asyncio.create_task(sim.start(hub.on_line, on_connect))
-        while not all(hub.clocks.get(b) and hub.clocks[b].synced for b in ("wristL", "wristR", "bag", "hr")):
+        while not all(hub.clocks.get(b) and hub.clocks[b].synced for b in ("wristL", "wristR", "bag")):
             await asyncio.sleep(0.05)
         results = await run_demo(
             hub, rounds=1, combos_per_round=2, combo_time=2.5, rest_time=0.6, seed=1,
