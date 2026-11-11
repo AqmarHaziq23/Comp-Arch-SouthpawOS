@@ -48,7 +48,8 @@ def test_waits_for_window_then_resolves():
     f.add_punch(PunchEvent(1.00, "L", "J", 9))
     assert f.resolve(now=1.05) == []  # impact could still arrive
     f.add_impact(ImpactEvent(1.10, 40))
-    assert f.resolve(now=1.5)[0].landed
+    assert f.resolve(now=1.3) == []  # punch messages arrive ~300 ms late, keep waiting
+    assert f.resolve(now=2.0)[0].landed
 
 
 def test_vision_is_recorded_but_never_decides_landed():
@@ -67,3 +68,20 @@ def test_vision_off_ignores_events():
     f.add_vision(VisionEvent(3.0, "L", "H", contact=True, conf=0.9))
     (p,) = f.resolve(now=10.0)
     assert p.vision_type is None
+
+
+def test_unknown_punch_can_land_but_keeps_x_without_camera():
+    f = Fuser(use_vision=False)
+    f.add_punch(PunchEvent(4.0, "R", "X", 20))
+    f.add_impact(ImpactEvent(4.03, 80))
+    (p,) = f.resolve(now=10.0)
+    assert p.landed and p.type == "X" and p.wrist_type is None
+
+
+def test_camera_fills_in_unknown_punch_type():
+    f = Fuser(use_vision=True)
+    f.add_punch(PunchEvent(4.0, "R", "X", 20))
+    f.add_vision(VisionEvent(4.05, "R", "C", contact=True, conf=0.8))
+    (p,) = f.resolve(now=10.0)
+    assert p.type == "C" and p.wrist_type == "X"
+    assert p.vision_agrees is None  # nothing to compare against
