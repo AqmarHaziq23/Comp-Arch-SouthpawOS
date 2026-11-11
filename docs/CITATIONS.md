@@ -18,3 +18,4 @@ tutorial, and put a credit comment at the top of the file that uses it.
 | `firmware/wrist/southpaw_wrist/battery.*` | TinyCircuits TinyScreen/ST BLE Smartwatch example (`displayBattery()` in `display.ino`), Ben Rose, TinyCircuits; from `TinyScreen_Examples.zip` on the ICT1011 course site (xSiTe) | Not stated | ICT1011 course site (xSiTe), Content | Yue Ming |
 | `training/tools/ble_listen.py` | bleak example `uart_service.py` | MIT | https://github.com/hbldh/bleak | Yue Ming |
 | `training/tools/` (dependency) | bleak BLE library | MIT | https://github.com/hbldh/bleak | Yue Ming |
+| `training/tools/` (dependency) | scikit-learn (`DecisionTreeClassifier`, `export_text`) | BSD-3-Clause | https://scikit-learn.org | Yue Ming |

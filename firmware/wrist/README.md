@@ -98,6 +98,20 @@ It runs **the same detector and features as the board** (constants read from `so
 - writes `training/data/features.csv`, one row per punch, with the label, hand and person taken from the file name. Besides the values at the peak (`peak_*`, `dom_*`, `burst_ms`, tilt), it has **whole-window** values that don't depend on which sample the detector called the peak: each axis's `max_*` and `min_*`, `order_*` (ms from the max to the min, > 0 = max first) and `win_peak_counts`;
 - saves `<file>_punches.png` next to each CSV, one panel per punch, so you can check the cuts by eye (PNGs are gitignored).
 
+### Train and test the classifier
+
+```bash
+pip install scikit-learn
+python training/tools/train_classifier.py                    # both hands, depth 3
+python training/tools/train_classifier.py --sweep            # compare tree depths 1-6
+python training/tools/train_classifier.py --features window  # leave out the arm-angle (gravity) values
+python training/tools/train_classifier.py --show-tree
+```
+
+It cuts every recording with `segment_punches.py`, so it trains on exactly the integers the board computes, and trains **one decision tree per hand** (orthodox): left = jab / hook / uppercut / not a punch, right = cross / hook / uppercut / not a punch. `idle` and `offhand` files are "not a punch".
+
+Testing is **leave-one-file-out**: every file is predicted by a tree that never saw it, so punches from the same 20 s recording are never on both sides. It prints accuracy, recall and precision per type, a confusion table, accuracy per person (once there is more than one) and the features the tree relies on.
+
 If you change the detector or features in the firmware, change `segment_punches.py` the same way.
 
 ## 4. The game firmware: `southpaw_wrist`
