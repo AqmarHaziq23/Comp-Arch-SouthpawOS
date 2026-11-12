@@ -1,4 +1,4 @@
-# SouthpawOS Message Protocol — v1.4
+# SouthpawOS Message Protocol — v1.5
 
 Owner: **Haziq (Member C)**. Only the owner changes this file. Bump the version
 and post in the group chat when you do.
@@ -54,7 +54,7 @@ the type.
 | Bag → Pi | Heart rate | `H,142,1` | 142 BPM; `1` = good reading, `0` = unreliable. Sent about every 2 s while a finger is on the sensor |
 | Pi → Bag | Combo | `C,1-2-3` | Show this combo (jab, cross, lead hook) and play the cue |
 | Pi → Bag | Sound | `S,HIT` | `BELL`, `WARN`, `HIT` or `MISS` |
-| Pi → Bag | Mode | `M,REST` | `ROUND`, `REST` (heart-rate prompt) or `SUMMARY` |
+| Pi → Bag | Mode | `M,REST` | `WAIT` (tap card, hit the bag 5× to start), `ROUND`, `REST` (heart-rate prompt) or `SUMMARY` |
 | Pi → any board | Clock ping | `T` | Board must reply immediately with its `millis()` |
 | Any board → Pi | Clock reply | `T,48100` | Board time when the ping arrived |
 
@@ -63,7 +63,7 @@ UDP datagram sent to `127.0.0.1`:
 
 | From | Port | Example |
 |------|------|---------|
-| Vision process | 5005 | `{"t": 1731.42, "hand": "L", "type": "H", "contact": true, "conf": 0.8}` |
+| Vision process | 5005 | `{"kind": "punch", "t": 1731.42, "hand": "L", "type": "hook", "contact": true, "conf": 0.8}`, plus `{"kind": "status", ...}` once a second. `type` can be a letter or a word; `contact` can be `null` (bag zone not calibrated). |
 | NFC reader | 5006 | `{"uid": "04A2B91C"}` |
 
 `t` is Pi time in seconds from `time.monotonic()` on the same Pi.
@@ -114,8 +114,27 @@ pi_time = board_ms / 1000 + offset
 It keeps the sample with the shortest round trip (the least jitter). Firmware
 must answer `T` straight away, before any slow work such as drawing the screen.
 
+## The game (hub)
+
+`python -m southpaw play boards.toml` runs the game. Only the hub decides what
+happens; the boards just report and display.
+
+1. Hub sends `M,WAIT`. The bag shows the start screen and reports hits.
+2. The player taps their NFC card (optional: no card = guest).
+3. 5 bag hits within 6 s start the game.
+4. Each round: `M,ROUND`, `S,BELL`, then combos (`C,...`) until the round time
+   is up, `S,HIT`/`S,MISS` after each, `S,WARN` at 10 s left, `S,BELL` at the end.
+5. Rest: `M,REST`; the last good `H` reading of the rest is the round's heart rate.
+6. After each round the hub uploads it to the website (`dashboard/backend/pi_uploader.py`).
+7. `M,SUMMARY`, then back to 1.
+
+Heart rate (`H`) is accepted from any board: the bag, or a separate `hr` board in
+`boards.toml` if Zong Han's sensor gets its own board.
+
 ## Changelog
 
+- **v1.5 (12 Nov 2026):** `M,WAIT` (start screen), the vision message format as
+  Johanan built it (`kind`, word types, `contact: null`), and the game flow.
 - **v1.4 (11 Nov 2026):** the pulse sensor is on the bag board after all
   (there are only three boards), so `H` comes from `bag` and there's no `hr`
   board.

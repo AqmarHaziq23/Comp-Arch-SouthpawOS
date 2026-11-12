@@ -47,8 +47,8 @@
 
   Hub mode (BLE, protocol/PROTOCOL.md):
     The board advertises as P1D-BAG. When the Pi hub connects and sends a
-    command, the bag switches to hub mode: the hub runs the game, the
-    screen shows the called combo, the hub's S,* sounds play, and every
+    command, the bag switches to hub mode: the hub runs the game (M,WAIT
+    shows "tap your card, then hit the bag 5x"), the screen shows the called combo, the hub's S,* sounds play, and every
     hit is sent as I,<millis at the peak>,<strength 0-100>. If the hub
     disconnects, the bag goes back to the standalone game below.
     BLE code: ble.cpp / ble.h (TinyCircuits STBLE UARTPassThrough example,
@@ -1072,7 +1072,7 @@ bool startHitsTimedOut(uint32_t now) {
 bool     bleOk = false;              // the BLE TinyShield answered in setup()
 bool     bleWasConnected = false;
 char     hubCombo[BLE_MAX_MSG + 1] = "";   // e.g. "1-2-3"
-char     hubMode[8] = "ROUND";       // ROUND, REST or SUMMARY
+char     hubMode[8] = "ROUND";       // WAIT, ROUND, REST or SUMMARY
 uint16_t hubHits = 0;                // hits sent this hub session
 uint32_t hubFlashUntilMs = 0;
 bool     hubFlashing = false;
@@ -1135,6 +1135,13 @@ void drawHubHits(bool flash) {
 
 void showHub() {
   display.clearScreen();
+  if (strcmp(hubMode, "WAIT") == 0) {
+    printCentered("SOUTHPAW", 2, liberationSans_16ptFontInfo, C_YELLOW, C_BLACK);
+    printCentered("tap your card,", 24, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    printCentered("then hit the bag 5x", 35, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    drawHubHits(false);
+    return;
+  }
   if (strcmp(hubMode, "REST") == 0) {
     printCentered("REST", 6, liberationSans_16ptFontInfo, C_CYAN, C_BLACK);
     printCentered("finger on the", 32, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
@@ -1195,11 +1202,12 @@ void handleHubLine(const char *line) {
     else if (strcmp(n, "MISS") == 0) playSfx(SFX_MISS);
   } else if (line[0] == 'M' && line[1] == ',') {
     const char *m = line + 2;
-    if (strcmp(m, "ROUND") == 0 || strcmp(m, "REST") == 0 || strcmp(m, "SUMMARY") == 0) {
+    if (strcmp(m, "WAIT") == 0 || strcmp(m, "ROUND") == 0 || strcmp(m, "REST") == 0 || strcmp(m, "SUMMARY") == 0) {
       enterHub();
       strncpy(hubMode, m, sizeof(hubMode) - 1);
       hubMode[sizeof(hubMode) - 1] = '\0';
       if (strcmp(m, "ROUND") == 0) hubCombo[0] = '\0';
+      if (strcmp(m, "WAIT") == 0 || strcmp(m, "ROUND") == 0) hubHits = 0;
       showHub();
     }
   }
@@ -1404,7 +1412,7 @@ void loop() {
           SerialMonitorInterface.print(F("HIT sent, peak="));
           SerialMonitorInterface.print(peakG, 2);
           SerialMonitorInterface.println(F("g"));
-          if (strcmp(hubMode, "ROUND") == 0) {
+          if (strcmp(hubMode, "ROUND") == 0 || strcmp(hubMode, "WAIT") == 0) {
             drawHubHits(true);
             hubFlashing = true;
             hubFlashUntilMs = now + HUB_FLASH_MS;
@@ -1413,7 +1421,7 @@ void loop() {
       }
       if (hubFlashing && (int32_t)(now - hubFlashUntilMs) >= 0) {
         hubFlashing = false;
-        if (strcmp(hubMode, "ROUND") == 0) drawHubHits(false);
+        if (strcmp(hubMode, "ROUND") == 0 || strcmp(hubMode, "WAIT") == 0) drawHubHits(false);
       }
       break;
 
