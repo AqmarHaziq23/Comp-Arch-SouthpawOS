@@ -35,7 +35,8 @@ NAME_RE = re.compile(r"^(?P<person>[^_]+)_(?P<hand>[LR])_(?P<label>[^_]+)_(?P<st
 AXES = "xyz"
 FEATURE_COLUMNS = ["file", "person", "hand", "label", "punch", "row", "peak_ms", "peak_counts", "peak_g",
                    "dom_axis", "dom_sign", "burst_ms", "pre_x", "pre_y", "pre_z", "post_x", "post_y", "post_z",
-                   "tilt_change"]
+                   "tilt_change", "max_x", "max_y", "max_z", "min_x", "min_y", "min_z",
+                   "order_x", "order_y", "order_z", "win_peak_counts"]
 
 
 # ---------------------------------------------------------------- constants from config.h
@@ -144,6 +145,15 @@ def features(w, c):
 
     before, after = avg(0), avg(len(w) - n_avg)
     d = [a - b for a, b in zip(after, before)]
+
+    # Whole window: per-axis max and min (the first one wins a tie), max-to-min time, largest total.
+    whole = {}
+    for k, a in enumerate(AXES, 1):
+        vals = [s[k] for s in w]
+        hi, lo = max(vals), min(vals)
+        whole["max_" + a], whole["min_" + a] = hi, lo
+        whole["order_" + a] = (vals.index(lo) - vals.index(hi)) * c["SAMPLE_PERIOD_MS"]
+    whole["win_peak_counts"] = math.isqrt(max(mag2(s) for s in w))
     return {
         "peak_ms": p[0], "peak_counts": peak_counts,
         "peak_g": (peak_counts + c["COUNTS_PER_G"] // 2) // c["COUNTS_PER_G"],
@@ -152,6 +162,7 @@ def features(w, c):
         "pre_x": before[0], "pre_y": before[1], "pre_z": before[2],
         "post_x": after[0], "post_y": after[1], "post_z": after[2],
         "tilt_change": math.isqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]),
+        **whole,
     }
 
 

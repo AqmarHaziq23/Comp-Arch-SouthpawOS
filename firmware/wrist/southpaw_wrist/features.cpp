@@ -66,4 +66,27 @@ void features_compute(const Sample* w, PunchFeatures& f) {
   average(w, WINDOW_LEN - GRAVITY_AVG_SAMPLES, GRAVITY_AVG_SAMPLES, f.postX, f.postY, f.postZ);
   int32_t dx = f.postX - f.preX, dy = f.postY - f.preY, dz = f.postZ - f.preZ;
   f.tiltChange = (uint16_t)isqrt32((uint32_t)(dx * dx + dy * dy + dz * dz));
+
+  // Whole window: per-axis max and min (the first one wins a tie), their order, the largest total.
+  int16_t mx[3], mn[3];
+  uint16_t imx[3] = {0, 0, 0}, imn[3] = {0, 0, 0};
+  mx[0] = mn[0] = w[0].x;
+  mx[1] = mn[1] = w[0].y;
+  mx[2] = mn[2] = w[0].z;
+  uint32_t maxMag2 = mag2_of(w[0]);
+  for (uint16_t i = 1; i < WINDOW_LEN; i++) {
+    const int16_t s[3] = {w[i].x, w[i].y, w[i].z};
+    for (uint8_t a = 0; a < 3; a++) {
+      if (s[a] > mx[a]) { mx[a] = s[a]; imx[a] = i; }
+      if (s[a] < mn[a]) { mn[a] = s[a]; imn[a] = i; }
+    }
+    uint32_t m2 = mag2_of(w[i]);
+    if (m2 > maxMag2) maxMag2 = m2;
+  }
+  f.maxX = mx[0]; f.maxY = mx[1]; f.maxZ = mx[2];
+  f.minX = mn[0]; f.minY = mn[1]; f.minZ = mn[2];
+  f.orderX = (int16_t)(((int16_t)imn[0] - (int16_t)imx[0]) * (int16_t)SAMPLE_PERIOD_MS);
+  f.orderY = (int16_t)(((int16_t)imn[1] - (int16_t)imx[1]) * (int16_t)SAMPLE_PERIOD_MS);
+  f.orderZ = (int16_t)(((int16_t)imn[2] - (int16_t)imx[2]) * (int16_t)SAMPLE_PERIOD_MS);
+  f.winPeakMag = (uint16_t)isqrt32(maxMag2);
 }

@@ -18,5 +18,7 @@ tutorial, and put a credit comment at the top of the file that uses it.
 | `firmware/wrist/southpaw_wrist/battery.*` | TinyCircuits TinyScreen/ST BLE Smartwatch example (`displayBattery()` in `display.ino`), Ben Rose, TinyCircuits; from `TinyScreen_Examples.zip` on the ICT1011 course site (xSiTe) | Not stated | ICT1011 course site (xSiTe), Content | Yue Ming |
 | `training/tools/ble_listen.py` | bleak example `uart_service.py` | MIT | https://github.com/hbldh/bleak | Yue Ming |
 | `training/tools/` (dependency) | bleak BLE library | MIT | https://github.com/hbldh/bleak | Yue Ming |
+| `training/tools/` (dependency) | scikit-learn (`DecisionTreeClassifier`, `export_text`) | BSD-3-Clause | https://scikit-learn.org | Yue Ming |
+| `training/tools/train_classifier.py` (dependency) → `firmware/wrist/southpaw_wrist/classifier_model.c` | m2cgen 0.10.0 (decision tree → C code) | MIT | https://github.com/BayesWitnesses/m2cgen | Yue Ming |
 | `firmware/bag/ble.cpp`, `ble.h` | TinyCircuits ST BLE TinyShield UARTPassThrough example (Ben Rose), via Yue Ming's wrist `ble.cpp` | Not stated | https://learn.tinycircuits.com/Communication/Bluetooth-Low-Energy_TinyShield_Tutorial/ | Haziq |
 | `firmware/bag/` (dependency) | TinyCircuits BMA250 Arduino library | Not stated for code | https://github.com/TinyCircuits/TinyCircuits-TinyShield-Sensor-ASD2511 | Zong Han |
