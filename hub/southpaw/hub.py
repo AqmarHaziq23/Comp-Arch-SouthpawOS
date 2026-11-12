@@ -41,6 +41,9 @@ class Hub:
         self.player_uid: str | None = None
         self.bad_lines = 0
         self.on_punch = on_punch
+        # Called with (pi_time, strength) for every bag hit; the game uses it for the 5-hit start.
+        self.on_impact: Callable[[float, int], None] | None = None
+        self.vision_status_at: float | None = None  # last vision heartbeat, Pi time
         self._clock_replies: dict[str, asyncio.Event] = {}
         self._log = None
         if log_dir is not None:
@@ -77,14 +80,26 @@ class Hub:
         elif isinstance(msg, proto.Impact):
             t = clock.to_pi_time(msg.board_ms, fallback=t_recv)
             self.fuser.add_impact(ImpactEvent(t, msg.strength))
+            if self.on_impact:
+                self.on_impact(t, msg.strength)
         elif isinstance(msg, proto.HeartRate):
             self.heart_rates.append((t_recv, msg.bpm, msg.good))
         # RawWindow lines are already in the session log; training scripts read them from there.
 
     def _on_vision(self, line: str) -> None:
+        """Johanan's vision process: {"kind": "punch", ...} or {"kind": "status", ...} once a second."""
         d = json.loads(line)
+        kind = d.get("kind", "punch")
+        if kind == "status":
+            self.vision_status_at = time.monotonic()
+            return
+        if kind != "punch":
+            return
         code = proto.PUNCH_NAMES.get(str(d["type"]).upper(), str(d["type"]).upper())
-        self.fuser.add_vision(VisionEvent(float(d["t"]), d["hand"], code, bool(d["contact"]), float(d["conf"])))
+        if code not in proto.PUNCH_CODES:
+            code = proto.UNKNOWN
+        contact = d.get("contact")  # None when the bag zone isn't calibrated: treated as "didn't see"
+        self.fuser.add_vision(VisionEvent(float(d["t"]), d["hand"], code, bool(contact), float(d.get("conf", 0.0))))
 
     # -- output
 
@@ -140,12 +155,16 @@ class _UdpLines(asyncio.DatagramProtocol):
         asyncio.ensure_future(self.hub.on_line(self.source, text, time.monotonic()))
 
 
-async def listen_local(hub: Hub, vision_port: int = VISION_PORT, nfc_port: int = NFC_PORT):
-    """Receive vision and NFC events from other processes on the Pi via UDP."""
+async def listen_local(hub: Hub, vision_port: int = VISION_PORT, nfc_port: int = NFC_PORT, host: str = "127.0.0.1"):
+    """Receive vision and NFC events from other processes via UDP.
+
+    host "127.0.0.1" = only from this machine; "0.0.0.0" = also from other
+    machines (e.g. vision on a laptop). Vision timestamps only line up when it
+    runs on the same machine as the hub."""
     loop = asyncio.get_running_loop()
     transports = []
     for port, source in ((vision_port, "vision"), (nfc_port, "nfc")):
-        t, _ = await loop.create_datagram_endpoint(lambda s=source: _UdpLines(hub, s), local_addr=("127.0.0.1", port))
+        t, _ = await loop.create_datagram_endpoint(lambda s=source: _UdpLines(hub, s), local_addr=(host, port))
         transports.append(t)
     return transports
 
