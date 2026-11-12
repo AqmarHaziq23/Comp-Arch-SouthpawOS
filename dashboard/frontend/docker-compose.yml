@@ -1,0 +1,38 @@
+# SouthpawOS dashboard: the website + its database.
+#   cp .env.example .env      (then change the three secrets)
+#   docker compose up --build
+# The site is on http://localhost:5000. The Pi uploads to /api/round on the same address.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: southpaw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env first}
+      POSTGRES_DB: southpaw
+    volumes:
+      - dbdata:/var/lib/postgresql/data     # the data survives restarts and rebuilds
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U southpaw -d southpaw"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # No "ports:" on purpose. Only the website talks to the database; the Pi goes through /api/round.
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://southpaw:${POSTGRES_PASSWORD}@db:5432/southpaw
+      SECRET_KEY: ${SECRET_KEY:?copy .env.example to .env first}
+      INGEST_TOKEN: ${INGEST_TOKEN:?copy .env.example to .env first}
+      TZ: Asia/Singapore
+    ports:
+      - "5000:5000"
+
+volumes:
+  dbdata:

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ p.player.nickname }} - SouthpawOS{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem">
+  <h2>{{ p.player.nickname }}</h2>
+  {% if own %}
+  <form method="post" action="{{ url_for('account_delete') }}"
+        onsubmit="return confirm('Delete your account and all your sessions? This cannot be undone.')">
+    <button class="btn ghost" type="submit">Delete my account</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if own %}
+<form class="panel" method="post" action="{{ url_for('account_card') }}" style="margin-bottom:1rem">
+  <label for="card_uid" style="margin-top:0">My NFC card</label>
+  <input id="card_uid" name="card_uid" type="text" maxlength="32" autocomplete="off" placeholder="04A2B91C" value="{{ p.player.card_uid or '' }}">
+  <button class="btn ghost" type="submit">{{ 'Change card' if p.player.card_uid else 'Link card' }}</button>
+  {% if card_error %}<p class="bad" role="alert">{{ card_error }}</p>{% endif %}
+  <p class="note">{% if p.player.card_uid %}Rounds played after tapping this card at the Pi are saved here.{% else %}No card linked yet, so your rounds cannot be saved to this account. Enter your card's ID.{% endif %}</p>
+</form>
+{% elif not p.player.card_uid %}
+<p class="note" style="margin:0 0 1rem">{{ p.player.nickname }} has not linked a card yet, so no rounds can be saved for them.</p>
+{% endif %}
+
+<div class="panel stats" style="margin-bottom:1rem">
+  <div class="stat"><b>{{ p.best_score }}</b><span>High score</span></div>
+  <div class="stat"><b>{{ p.best_streak }}</b><span>Best combo streak</span></div>
+  <div class="stat"><b>{{ p.accuracy }}%</b><span>Overall accuracy</span></div>
+  <div class="stat"><b>{{ p.total_sessions }}</b><span>Sessions</span></div>
+</div>
+
+{% if p.trend %}
+<div class="grid cols-2">
+  <div class="panel"><h3>Accuracy by session</h3><div class="chartbox"><canvas id="acc"></canvas></div></div>
+  <div class="panel"><h3>Score by session</h3><div class="chartbox"><canvas id="score"></canvas></div></div>
+  <div class="panel" style="grid-column:1/-1">
+    <h3>Heart-rate recovery over time</h3>
+    <div class="chartbox"><canvas id="hr"></canvas></div>
+    <p class="note">Average rest-period BPM per session (good readings only). Lower suggests better recovery.
+      This is a training trend from a hobby sensor, not a health measurement.</p>
+  </div>
+</div>
+
+<h3 style="margin-top:1.5rem">Session history</h3>
+<div class="panel"><table>
+  <thead><tr><th>When</th><th class="num">Score</th><th class="num">Accuracy</th><th class="num">Thrown</th><th class="num">Landed</th></tr></thead>
+  <tbody>{% for s in p.sessions %}
+  <tr class="link"><td><a href="{{ url_for('session_page', sid=s.id) }}">{{ s.started_at|when }}</a></td>
+    <td class="num">{{ s.score }}</td><td class="num">{{ s.accuracy }}%</td>
+    <td class="num">{{ s.thrown }}</td><td class="num">{{ s.landed }}</td></tr>
+  {% endfor %}</tbody></table></div>
+{% else %}
+<div class="panel empty">No sessions yet. Tap the card at the Pi and play a round.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if p.trend %}
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script>
+var T = {{ p.trend|tojson }};
+var labels = T.map(function (t, i) { return '#' + (i + 1); });
+loadLib("{{ url_for('static', filename='vendor/chart.umd.min.js') }}",
+        "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js").then(function () {
+  if (!chartsReady(['acc', 'score', 'hr'])) return;
+  drawChart('acc', 'line', labels, [ds('Accuracy %', T.map(function (t) { return t.accuracy; }), COLORS.green)], '%', {min: 0, max: 100});
+  drawChart('score', 'bar', labels, [ds('Score', T.map(function (t) { return t.score; }), COLORS.ink)], 'points');
+  drawChart('hr', 'line', labels, [ds('Avg rest BPM', T.map(function (t) { return t.avg_rest; }), COLORS.red)], 'BPM');
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,6 +1,8 @@
 """SouthpawOS hub command line.
 
-    python -m southpaw sim                 # full demo with fake boards
+    python -m southpaw play boards.toml    # THE GAME: card tap + 5 bag hits to start, rounds, upload
+    python -m southpaw play --sim          # the game with fake boards and a fake player
+    python -m southpaw sim                 # quick demo loop with fake boards
     python -m southpaw scan                # find the TinyCircuits boards
     python -m southpaw ble boards.toml     # demo with the real boards
     python -m southpaw ble boards.toml --listen   # just print what boards send
@@ -13,6 +15,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -50,7 +53,80 @@ def _db_commands(args: argparse.Namespace) -> None:
         store.close()
 
 
+def _make_uploader(args: argparse.Namespace):
+    """Jovis's dashboard/backend/pi_uploader.py, if a website server was given."""
+    if not args.server:
+        return None
+    if not args.token:
+        sys.exit("--server needs the website's INGEST_TOKEN: pass --token or set INGEST_TOKEN.")
+    backend = Path(__file__).resolve().parents[2] / "dashboard" / "backend"
+    sys.path.insert(0, str(backend))
+    from pi_uploader import Uploader  # noqa: E402
+
+    return Uploader(args.server, args.token, queue_file=str(Path(args.log_dir) / "unsent_rounds.jsonl"))
+
+
+async def _play(args: argparse.Namespace) -> None:
+    from .game import Game, GameConfig
+
+    if args.sim:
+        from .sim import SimConfig, Simulator
+
+        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, seed=args.seed))
+    else:
+        from .ble import BleTransport
+
+        if not args.config:
+            sys.exit("Give boards.toml, or use --sim.")
+        transport = BleTransport(_load_addresses(Path(args.config)))
+
+    hub = Hub(transport, Fuser(use_vision=not args.no_vision), log_dir=Path(args.log_dir))
+    store = None
+    if not args.no_db:
+        from .db import Store
+
+        store = Store(args.db)
+    uploader = _make_uploader(args)
+    cfg = GameConfig(
+        rounds=args.rounds,
+        round_secs=args.round_secs,
+        rest_secs=args.rest_secs,
+        summary_secs=args.summary_secs,
+        stance=args.stance,
+        seed=args.seed,
+    )
+    game = Game(hub, cfg, store=store, uploader=uploader, source="sim" if args.sim else "ble")
+
+    synced = asyncio.Event()
+    boards = ("wristL", "wristR", "bag") if args.sim else tuple(transport.addresses)
+
+    async def on_connect(board: str) -> None:
+        await hub.sync_clock(board)
+        if all(hub.clocks.get(b) and hub.clocks[b].synced for b in boards):
+            synced.set()
+        if game.state == "wait" and board == "bag":
+            await hub.send("bag", "M,WAIT\n")  # bag reconnected: show the start screen again
+
+    udp = [] if args.sim else await listen_local(hub, host=args.listen_host)
+    runner = asyncio.create_task(transport.start(hub.on_line, on_connect))
+    try:
+        print(f"waiting for {', '.join(boards)} to connect...")
+        await synced.wait()
+        print("all boards connected" + (f", uploading to {args.server}" if uploader else ", no website upload"))
+        await game.run_forever(args.games)
+    finally:
+        runner.cancel()
+        for t in udp:
+            t.close()
+        if store:
+            store.close()
+        hub.close()
+
+
 async def _main(args: argparse.Namespace) -> None:
+    if args.cmd == "play":
+        await _play(args)
+        return
     if args.cmd == "scan":
         from .ble import scan
 
@@ -133,6 +209,26 @@ def main() -> None:
         c.add_argument("--log-dir", default="logs")
         c.add_argument("--db", default="southpaw.db", help="SQLite file for players and scores")
         c.add_argument("--no-db", action="store_true", help="don't save to the database")
+
+    g = sub.add_parser("play", help="run the real game (card tap + 5 bag hits to start)")
+    g.add_argument("config", nargs="?", help="boards.toml with the board addresses")
+    g.add_argument("--sim", action="store_true", help="fake boards and a fake player instead of BLE")
+    g.add_argument("--rounds", type=int, default=3)
+    g.add_argument("--round-secs", type=float, default=60.0)
+    g.add_argument("--rest-secs", type=float, default=20.0)
+    g.add_argument("--summary-secs", type=float, default=10.0)
+    g.add_argument("--games", type=int, default=None, help="stop after this many games (default: keep going)")
+    g.add_argument("--stance", choices=("orthodox", "southpaw"), default="orthodox")
+    g.add_argument("--no-vision", action="store_true")
+    g.add_argument("--seed", type=int, default=None)
+    g.add_argument("--log-dir", default="logs")
+    g.add_argument("--db", default="southpaw.db")
+    g.add_argument("--no-db", action="store_true")
+    g.add_argument("--server", default=os.environ.get("SOUTHPAW_SERVER"),
+                   help="website address, e.g. http://192.168.137.1:5000 (or set SOUTHPAW_SERVER)")
+    g.add_argument("--token", default=os.environ.get("INGEST_TOKEN"), help="the website's INGEST_TOKEN")
+    g.add_argument("--listen-host", default="127.0.0.1",
+                   help="0.0.0.0 to accept vision/NFC messages from other machines")
 
     lb = sub.add_parser("leaderboard", help="best score per player")
     lb.add_argument("--limit", type=int, default=10)

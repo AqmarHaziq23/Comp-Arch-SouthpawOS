@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Union
 
-PROTOCOL_VERSION = "1.3"
+PROTOCOL_VERSION = "1.5"
 MAX_BLE_PAYLOAD = 20  # bytes per BLE packet, including the trailing "\n"
 
 # Nordic UART Service, as set up by the TinyCircuits STBLE UART example.
@@ -21,7 +21,7 @@ PUNCH_CODES = {"J": "JAB", "C": "CROSS", "H": "HOOK", "U": "UPPERCUT", "X": "UNK
 UNKNOWN = "X"  # punch detected, type not classified
 PUNCH_NAMES = {name: code for code, name in PUNCH_CODES.items()}
 SOUNDS = ("BELL", "WARN", "HIT", "MISS")
-MODES = ("ROUND", "REST", "SUMMARY")
+MODES = ("WAIT", "ROUND", "REST", "SUMMARY")
 
 # Combo numbers -> (lead/rear, punch code). Boxing numbering, orthodox stance.
 COMBO_NUMBERS = {

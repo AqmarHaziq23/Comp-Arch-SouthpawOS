@@ -47,8 +47,8 @@
 
   Hub mode (BLE, protocol/PROTOCOL.md):
     The board advertises as P1D-BAG. When the Pi hub connects and sends a
-    command, the bag switches to hub mode: the hub runs the game, the
-    screen shows the called combo, the hub's S,* sounds play, and every
+    command, the bag switches to hub mode: the hub runs the game (M,WAIT
+    shows "tap your card, then hit the bag 5x"), the screen shows the called combo, the hub's S,* sounds play, and every
     hit is sent as I,<millis at the peak>,<strength 0-100>. If the hub
     disconnects, the bag goes back to the standalone game below.
     BLE code: ble.cpp / ble.h (TinyCircuits STBLE UARTPassThrough example,
@@ -137,6 +137,13 @@ const uint32_t COMBO_GAP_MS    = 600;   // punches closer than this = combo
 // Hub mode
 const float    HUB_FULL_SCALE_G = 8.0;    // impact strength 100 = this many g (the accelerometer range)
 const uint32_t HUB_FLASH_MS     = 200;    // hit counter flashes this long
+// Hub mode auto-calibration: while the bag isn't in a round (start screen,
+// rest, summary) it keeps measuring its own wobble, like the standalone
+// game's calibration, so a swinging bag doesn't count as hits.
+const float    HUB_QUIET_MAX_G  = 0.50;   // movement above this isn't "wobble" (it's a hit or a push)
+const float    HUB_NOISE_ALPHA  = 0.01;   // ~1 s averaging at 100 Hz
+const float    HUB_MAX_THRESH_G = 2.00;   // never make hits harder than this to register
+const uint32_t HUB_REPORT_MS    = 3000;   // how often to print the threshold / near misses
 
 // Results
 const uint32_t RESULT_PAGE_MS    = 4000;   // auto-rotate results pages
@@ -1072,10 +1079,42 @@ bool startHitsTimedOut(uint32_t now) {
 bool     bleOk = false;              // the BLE TinyShield answered in setup()
 bool     bleWasConnected = false;
 char     hubCombo[BLE_MAX_MSG + 1] = "";   // e.g. "1-2-3"
-char     hubMode[8] = "ROUND";       // ROUND, REST or SUMMARY
+char     hubMode[8] = "ROUND";       // WAIT, ROUND, REST or SUMMARY
 uint16_t hubHits = 0;                // hits sent this hub session
 uint32_t hubFlashUntilMs = 0;
 bool     hubFlashing = false;
+float    hubNoiseSq = -1;            // < 0 = not measured yet
+float    hubNearMissG = 0;           // strongest movement that stayed under the threshold
+uint32_t hubLastReportMs = 0;
+
+// Keep threshold matched to the bag's wobble while it isn't in a round.
+void hubTrackNoise(float dyn) {
+  if (inPeak || dyn > HUB_QUIET_MAX_G) return;
+  if (hubNoiseSq < 0) hubNoiseSq = dyn * dyn;
+  hubNoiseSq += HUB_NOISE_ALPHA * (dyn * dyn - hubNoiseSq);
+  noiseG      = sqrt(hubNoiseSq);
+  threshold   = min(HUB_MAX_THRESH_G, max(PUNCH_MIN_G, NOISE_SIGMA * noiseG));
+  activeLevel = max(ACTIVE_MIN_G, 3.0f * noiseG);
+}
+
+// Serial diagnostics for tuning: the threshold, and punches that were too weak to count.
+void hubReport(uint32_t now) {
+  if (now - hubLastReportMs < HUB_REPORT_MS) return;
+  hubLastReportMs = now;
+  SerialMonitorInterface.print(F("hub: threshold="));
+  SerialMonitorInterface.print(threshold, 2);
+  SerialMonitorInterface.print(F("g noise="));
+  SerialMonitorInterface.print(noiseG, 3);
+  if (hubNearMissG > 0.3f) {
+    SerialMonitorInterface.print(F("g  near miss="));
+    SerialMonitorInterface.print(hubNearMissG, 2);
+    SerialMonitorInterface.print(F("g (too weak to count)"));
+  } else {
+    SerialMonitorInterface.print(F("g"));
+  }
+  SerialMonitorInterface.println();
+  hubNearMissG = 0;
+}
 
 // Append an unsigned number as decimal digits. Returns the new end.
 char *putUint(char *p, uint32_t v) {
@@ -1135,6 +1174,13 @@ void drawHubHits(bool flash) {
 
 void showHub() {
   display.clearScreen();
+  if (strcmp(hubMode, "WAIT") == 0) {
+    printCentered("SOUTHPAW", 2, liberationSans_16ptFontInfo, C_YELLOW, C_BLACK);
+    printCentered("tap your card,", 24, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    printCentered("then hit the bag 5x", 35, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    drawHubHits(false);
+    return;
+  }
   if (strcmp(hubMode, "REST") == 0) {
     printCentered("REST", 6, liberationSans_16ptFontInfo, C_CYAN, C_BLACK);
     printCentered("finger on the", 32, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
@@ -1195,11 +1241,12 @@ void handleHubLine(const char *line) {
     else if (strcmp(n, "MISS") == 0) playSfx(SFX_MISS);
   } else if (line[0] == 'M' && line[1] == ',') {
     const char *m = line + 2;
-    if (strcmp(m, "ROUND") == 0 || strcmp(m, "REST") == 0 || strcmp(m, "SUMMARY") == 0) {
+    if (strcmp(m, "WAIT") == 0 || strcmp(m, "ROUND") == 0 || strcmp(m, "REST") == 0 || strcmp(m, "SUMMARY") == 0) {
       enterHub();
       strncpy(hubMode, m, sizeof(hubMode) - 1);
       hubMode[sizeof(hubMode) - 1] = '\0';
       if (strcmp(m, "ROUND") == 0) hubCombo[0] = '\0';
+      if (strcmp(m, "WAIT") == 0 || strcmp(m, "ROUND") == 0) hubHits = 0;
       showHub();
     }
   }
@@ -1398,22 +1445,25 @@ void loop() {
       // the hub runs the game: just report every hit
       if (sampleReady) {
         float dyn = processSample(x, y, z, !inPeak);
+        if (strcmp(hubMode, "ROUND") != 0) hubTrackNoise(dyn);
+        if (!inPeak && dyn < threshold && dyn > hubNearMissG) hubNearMissG = dyn;
         if (detectHit(now, dyn)) {
           sendImpact(peakAtMs, peakG);
           hubHits++;
           SerialMonitorInterface.print(F("HIT sent, peak="));
           SerialMonitorInterface.print(peakG, 2);
           SerialMonitorInterface.println(F("g"));
-          if (strcmp(hubMode, "ROUND") == 0) {
+          if (strcmp(hubMode, "ROUND") == 0 || strcmp(hubMode, "WAIT") == 0) {
             drawHubHits(true);
             hubFlashing = true;
             hubFlashUntilMs = now + HUB_FLASH_MS;
           }
         }
       }
+      hubReport(now);
       if (hubFlashing && (int32_t)(now - hubFlashUntilMs) >= 0) {
         hubFlashing = false;
-        if (strcmp(hubMode, "ROUND") == 0) drawHubHits(false);
+        if (strcmp(hubMode, "ROUND") == 0 || strcmp(hubMode, "WAIT") == 0) drawHubHits(false);
       }
       break;
 

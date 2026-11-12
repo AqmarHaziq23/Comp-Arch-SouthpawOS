@@ -34,6 +34,7 @@ class SimConfig:
     wrist_delay: tuple[float, float] = (0.25, 0.31)  # s, wrist waits for samples after the peak
     vision_latency: tuple[float, float] = (0.12, 0.30)  # s
     rest_bpm: tuple[int, int] = (150, 175)  # first rest; drops each round
+    start_delay: float = 1.0  # s after M,WAIT before the simulated player hits the bag 5 times
     hr_delay: float = 2.0  # s from M,REST until the player has a finger on the pulse sensor
     seed: int | None = None
 
@@ -68,6 +69,8 @@ class Simulator:
             self._later(self._lat(), self._clock_reply(board))
         elif board == "bag" and line.startswith("C,"):
             self._later(0, self._throw(proto.parse_combo(line)))
+        elif board == "bag" and line == "M,WAIT":
+            self._later(self.cfg.start_delay, self._start_hits())
         elif board == "bag" and line == "M,REST":
             self._later(self.cfg.hr_delay, self._heart_rate())
         # S,* and other M,* commands only change sound/screen on a real board.
@@ -142,6 +145,13 @@ class Simulator:
                 self._later(0, self._deliver("vision", json.dumps(event), self.rng.uniform(*cfg.vision_latency)))
 
             await asyncio.sleep(self.rng.uniform(*cfg.gap))
+
+    async def _start_hits(self, n: int = 5) -> None:
+        """The player hits the bag 5 times to start a game."""
+        for _ in range(n):
+            t = time.monotonic()
+            self._later(0, self._deliver("bag", f"I,{self.board_ms('bag', t)},{self.rng.randint(40, 80)}", self._lat()))
+            await asyncio.sleep(self.rng.uniform(0.3, 0.6))
 
     async def _heart_rate(self) -> None:
         lo, hi = self.cfg.rest_bpm
