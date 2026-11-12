@@ -88,6 +88,12 @@ class Fuser:
     def add_punch(self, e: PunchEvent) -> None:
         self._punches.append(e)
 
+    def clear(self) -> None:
+        """Forget everything not yet resolved (e.g. the start hits before a game)."""
+        self._punches.clear()
+        self._impacts.clear()
+        self._vision.clear()
+
     def add_impact(self, e: ImpactEvent) -> None:
         self._impacts.append(e)
 
