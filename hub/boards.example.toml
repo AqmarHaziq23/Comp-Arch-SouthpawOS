@@ -1,9 +1,7 @@
-# Copy to boards.toml and fill in the addresses from `python -m southpaw scan`.
-# Boards are matched by address only; the advertised name is ignored (it may be
-# "BlueNRG" or something like "P1D-WRIST-L"). A board keeps the same address
-# across power cycles. Power them on one at a time to tell which is which, then
-# label the boards.
+# Copy to boards.toml. Boards are matched by address only.
+# Each board's firmware sets its own fixed address (BLE_PUBLIC_ADDR), so these
+# stay the same after power cycles and reflashes, and on every Pi or laptop.
 [boards]
-wristL = "XX:XX:XX:XX:XX:01"
-wristR = "XX:XX:XX:XX:XX:02"
-bag    = "XX:XX:XX:XX:XX:03"
+wristL = "02:80:E1:50:31:4C"   # P1D-WRIST-L
+wristR = "02:80:E1:50:31:52"   # P1D-WRIST-R
+bag    = "02:80:E1:50:31:42"   # P1D-BAG
