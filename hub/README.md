@@ -33,7 +33,7 @@ Add `-v` before the command for debug logs: `python -m southpaw -v sim`.
 ```bash
 python -m southpaw play --sim                     # whole game with fake boards and a fake player
 python -m southpaw play boards.toml               # the real thing
-python -m southpaw play boards.toml --rounds 3 --round-secs 60 --rest-secs 20 \
+python -m southpaw play boards.toml --rounds 3 --round-secs 30 --rest-secs 20 \
     --server http://<website>:5000                # + upload each round (token in INGEST_TOKEN)
 ```
 
