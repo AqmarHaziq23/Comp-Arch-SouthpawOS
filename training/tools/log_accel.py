@@ -52,6 +52,42 @@ def find_port():
     sys.exit("Run again with --port <port>, e.g. --port COM5 or --port /dev/cu.usbmodem1101")
 
 
+def record(ser, path, seconds):
+    """Write `seconds` of the board's board_ms,x,y,z lines to `path` as CSV.
+
+    Returns (samples, bad lines, samples per second); the rate is None if fewer than 2 samples arrived.
+    """
+    n, bad, first_ms, last_ms = 0, 0, None, None
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["board_ms", "x_raw", "y_raw", "z_raw", "x_g", "y_g", "z_g"])
+        start = time.time()
+        while time.time() - start < seconds:
+            line = ser.readline().decode("ascii", errors="ignore").strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("ERROR"):
+                sys.exit(f"Board says: {line}")
+            parts = line.split(",")
+            if len(parts) != 4:
+                bad += 1
+                continue
+            try:
+                ms, x, y, z = (int(v) for v in parts)
+            except ValueError:
+                bad += 1
+                continue
+            w.writerow([ms, x, y, z,
+                        round(x / COUNTS_PER_G, 3), round(y / COUNTS_PER_G, 3), round(z / COUNTS_PER_G, 3)])
+            n += 1
+            if first_ms is None:
+                first_ms = ms
+            last_ms = ms
+    if n < 2 or last_ms == first_ms:
+        return n, bad, None
+    return n, bad, (n - 1) / ((last_ms - first_ms) / 1000.0)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Log TinyScreen+ accelerometer data to CSV.")
     ap.add_argument("--label", help="what you're recording: jab, cross, hook, uppercut, idle, ...")
@@ -86,37 +122,11 @@ def main():
             time.sleep(1)
         print(f"GO - recording '{args.label}' ({args.hand} hand) for {args.seconds:g} s")
 
-        n, bad, first_ms, last_ms = 0, 0, None, None
-        with open(path, "w", newline="") as f:
-            w = csv.writer(f)
-            w.writerow(["board_ms", "x_raw", "y_raw", "z_raw", "x_g", "y_g", "z_g"])
-            start = time.time()
-            while time.time() - start < args.seconds:
-                line = ser.readline().decode("ascii", errors="ignore").strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line.startswith("ERROR"):
-                    sys.exit(f"Board says: {line}")
-                parts = line.split(",")
-                if len(parts) != 4:
-                    bad += 1
-                    continue
-                try:
-                    ms, x, y, z = (int(v) for v in parts)
-                except ValueError:
-                    bad += 1
-                    continue
-                w.writerow([ms, x, y, z,
-                            round(x / COUNTS_PER_G, 3), round(y / COUNTS_PER_G, 3), round(z / COUNTS_PER_G, 3)])
-                n += 1
-                if first_ms is None:
-                    first_ms = ms
-                last_ms = ms
+        n, bad, rate = record(ser, path, args.seconds)
 
-    if n < 2 or last_ms == first_ms:
+    if rate is None:
         print(f"Only {n} samples received. Check the sketch is uploaded and the Serial Monitor is closed.")
         return
-    rate = (n - 1) / ((last_ms - first_ms) / 1000.0)
     print(f"Saved {n} samples to {path}  (about {rate:.0f} per second, {bad} bad lines)")
 
 

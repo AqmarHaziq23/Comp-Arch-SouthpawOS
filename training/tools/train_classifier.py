@@ -174,6 +174,9 @@ def main():
     for hand in [args.hand] if args.hand else ["L", "R"]:
         X, y, files, people = hand_data(rows, hand, args.features)
         classes = CLASSES[hand]
+        if len(set(files)) < 2:
+            sys.exit(f"{hand} hand: {len(set(files))} recording(s) in {sp.RAW_DIR}. Record at least two files first "
+                     "(older back-of-wrist recordings in back_of_wrist/ are not used).")
         wrong = sorted({cl for cl in y if cl not in classes})
         if wrong:
             sys.exit(f"{hand} hand has punches labelled {wrong}, which that hand can't throw (orthodox). Check the file names.")
