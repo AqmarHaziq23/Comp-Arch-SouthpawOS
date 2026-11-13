@@ -93,8 +93,15 @@ That's all three TinyCircuits boards.
 
 The hub finds boards **by address only**, set in `hub/boards.toml`. The
 advertised name (for example `P1D-WRIST-L`) is ignored, so naming the boards
-is optional and just helps when scanning. A board's address stays the same
-across power cycles.
+is optional and just helps when scanning. Each board advertises the fixed
+address its firmware sets, so it stays the same across power cycles and
+reflashes:
+
+| Board | Address |
+|---|---|
+| `wristL` | `02:80:E1:50:31:4C` |
+| `wristR` | `02:80:E1:50:31:52` |
+| `bag` | `02:80:E1:50:31:42` |
 
 Heart rate needs no command from the Pi. The bag board sends `H` while
 someone's finger is on the pulse sensor, and the hub uses the readings it gets

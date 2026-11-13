@@ -41,8 +41,8 @@ every 2 s from the pulse sensor code once that's added.
 5. Stack: TinyScreen+ → BLE TinyShield → Wireling Adapter (+ accelerometer).
    Keep the buzzer on Wireling port 0.
 6. Upload, open the Serial Monitor at 115200: it prints
-   `BLE ready as P1D-BAG, address ...`. Put that address on the `bag` line of
-   `hub/boards.toml`.
+   `BLE ready as P1D-BAG, address 02:80:E1:50:31:42`. That fixed address is
+   already on the `bag` line of `hub/boards.example.toml`.
 
 Rules: no `delay()` (the BLE link needs `aci_loop()` every loop), every message
 20 bytes or less and ending in `\n`. Start from **File → Examples → STBLE →

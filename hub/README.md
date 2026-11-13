@@ -56,10 +56,10 @@ Windows.
    say `General Discoverable Mode`.
 2. Make sure nothing else is connected to the board (turn off your phone's
    Bluetooth). A connected board stops advertising and won't show up.
-3. `python -m southpaw scan` and note the `BlueNRG` address. Power boards on
-   one at a time to tell them apart.
-4. Copy `boards.example.toml` to `boards.toml` and fill in the addresses
-   (`boards.toml` is gitignored). Delete the lines for boards you don't have.
+3. `python -m southpaw scan` should list `P1D-WRIST-L`, `P1D-WRIST-R` and
+   `P1D-BAG` at `02:80:E1:50:31:4C`, `...:52` and `...:42`.
+4. Copy `boards.example.toml` to `boards.toml` (gitignored); the fixed
+   addresses are already in it. Comment out boards you don't have.
 5. `python -m southpaw ble boards.toml --listen` prints everything the boards
    send. Type `P,L,H,1234,10` in the Serial Monitor and it shows up here.
 6. `python -m southpaw ble boards.toml` runs the demo game.
