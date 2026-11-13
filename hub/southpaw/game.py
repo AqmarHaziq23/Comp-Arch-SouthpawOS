@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class GameConfig:
     rounds: int = 3
-    round_secs: float = 60.0
+    round_secs: float = 30.0
     rest_secs: float = 20.0
     summary_secs: float = 10.0
     start_hits: int = 5            # bag hits that start a game
