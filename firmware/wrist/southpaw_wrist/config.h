@@ -37,8 +37,9 @@ constexpr uint16_t COUNTS_PER_G = 32;              // BMA250 at +/-16 g
 constexpr uint16_t DETECT_THRESHOLD_COUNTS = 96;   // 3.0 g. Starting guess: tune with real punches.
 constexpr uint16_t PEAK_SEARCH_MS = 150;           // after a trigger, the peak is the largest sample in this time.
                                                    // 100 missed the snap on 8/20 jabs: a slow 3-4 g wind-up set off the trigger ~110 ms before it.
-constexpr uint16_t COOLDOWN_MS = 400;              // no new trigger until this long after the peak.
-                                                   // 300 double-counted: a punch's 2nd burst (stop/retract) came up to 250 ms after the peak.
+constexpr uint16_t COOLDOWN_MS = 350;              // no new trigger until this long after the peak.
+                                                   // Combo punches come 0.38-0.45 s after the previous one (14 Nov, in the case).
+                                                   // 300 also caught the pull-back ~0.3 s after an uppercut; 400 left no margin.
 constexpr uint16_t WINDOW_PRE_MS = 150;            // punch window starts this long before the peak
 constexpr uint16_t WINDOW_POST_MS = 250;           // ... and ends this long after it
 

@@ -23,3 +23,5 @@ tutorial, and put a credit comment at the top of the file that uses it.
 | `firmware/bag/ble.cpp`, `ble.h` | TinyCircuits ST BLE TinyShield UARTPassThrough example (Ben Rose), via Yue Ming's wrist `ble.cpp` | Not stated | https://learn.tinycircuits.com/Communication/Bluetooth-Low-Energy_TinyShield_Tutorial/ | Haziq |
 | `firmware/bag/` (dependency) | TinyCircuits BMA250 Arduino library | Not stated for code | https://github.com/TinyCircuits/TinyCircuits-TinyShield-Sensor-ASD2511 | Zong Han |
 | `telegram_bot/` (dependency) | python-telegram-bot 22.8 (`Application`, long polling) | LGPL-3.0 | https://github.com/python-telegram-bot/python-telegram-bot | Johanan |
+| `vision/` (dependency + model) | MediaPipe Pose Landmarker 0.10.18 and `pose_landmarker_lite.task` (BlazePose GHUM 3D); V. Bazarevsky et al., "BlazePose: On-device Real-time Body Pose tracking", 2020 | Apache-2.0 | https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker | Johanan |
+| `vision/` (dependency) | OpenCV (`opencv-contrib-python`, installed with MediaPipe) | Apache-2.0 | https://opencv.org | Johanan |
