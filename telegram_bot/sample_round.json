@@ -1,17 +1,19 @@
 {
-  "duration_s": 120,
-  "punches_thrown": 86,
-  "punches_landed": 71,
+  "round": 1,
+  "rounds": 3,
+  "duration_s": 30,
+  "score": 120,
+  "thrown": 18,
+  "landed": 14,
+  "combos_called": 6,
+  "combos_hit": 4,
+  "best_streak": 3,
   "by_type": {
-    "jab":      {"thrown": 30, "landed": 27},
-    "cross":    {"thrown": 24, "landed": 20},
-    "hook":     {"thrown": 18, "landed": 14},
-    "uppercut": {"thrown": 14, "landed": 10}
+    "jab":      {"thrown": 6, "landed": 5},
+    "cross":    {"thrown": 5, "landed": 4},
+    "hook":     {"thrown": 4, "landed": 3},
+    "uppercut": {"thrown": 3, "landed": 2}
   },
-  "combos_called": 15,
-  "combos_completed": 12,
-  "score": 1310,
-  "heart_rate_avg": 152,
-  "heart_rate_max": 178,
-  "best_combo_streak": 5
+  "hr_bpm": 142,
+  "hr_good": true
 }

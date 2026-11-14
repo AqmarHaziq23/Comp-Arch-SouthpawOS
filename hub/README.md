@@ -32,6 +32,7 @@ Add `-v` before the command for debug logs: `python -m southpaw -v sim`.
 
 ```bash
 python -m southpaw play --sim                     # whole game with fake boards and a fake player
+python -m southpaw play --sim --card 04A2B91C     # ...who taps this NFC card first
 python -m southpaw play boards.toml               # the real thing
 python -m southpaw play boards.toml --rounds 3 --round-secs 30 --rest-secs 20 \
     --server http://<website>:5000                # + upload each round (token in INGEST_TOKEN)
@@ -42,6 +43,10 @@ picks the player; no tap = guest. Five bag hits within 6 s start the game.
 Each round calls combos until the time is up, then a rest (heart rate), and the
 round is uploaded with Jovis's `dashboard/backend/pi_uploader.py` and saved in
 `southpaw.db`. Rounds that can't be uploaded wait in `logs/unsent_rounds.jsonl`.
+
+Each round of a carded player also goes to Johanan's Telegram bot (`telegram_bot/`) over
+UDP `127.0.0.1:5007` (`southpaw/notify.py`), which messages the card's owner. If the bot
+isn't running the message is just lost; `--no-telegram` turns it off.
 
 Scoring per combo: 10 per punch with the right hand (and the right type, unless
 the wrist sent `X`), 5 per landed punch, +10 if the whole combo was right.

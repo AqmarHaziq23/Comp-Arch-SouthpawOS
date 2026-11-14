@@ -4,7 +4,8 @@
     2. player taps their NFC card     (optional: no card = guest)
     3. player hits the bag 5 times    -> game starts
     4. rounds of called combos, with a rest between rounds (heart rate)
-    5. every round goes to the website (Jovis's pi_uploader) and the local database
+    5. every round goes to the website (Jovis's pi_uploader), the local database
+       and the Telegram bot (notify.py), which messages the card's owner
     6. summary on the bag screen, then back to step 2
 
 Only the hub decides what happens in the game. The boards just report punches,
@@ -108,6 +109,7 @@ class Game:
         config: GameConfig | None = None,
         store=None,             # db.Store, optional
         uploader=None,          # dashboard/backend/pi_uploader.Uploader, optional
+        notifier=None,          # notify.BotNotifier (Telegram bot), optional
         source: str = "ble",
         printer: Callable[[str], None] = print,
     ) -> None:
@@ -115,6 +117,7 @@ class Game:
         self.cfg = config or GameConfig()
         self.store = store
         self.uploader = uploader
+        self.notifier = notifier
         self.source = source
         self.say = printer
         self.rng = random.Random(self.cfg.seed)
@@ -163,6 +166,7 @@ class Game:
                 self.store.add_heart_rate(session_id, n, r.hr_bpm, r.hr_good)
             rounds.append(r)
             await self._upload(r)
+            self._notify(player, r)
 
         total = sum(r.score for r in rounds)
         if self.store:
@@ -248,3 +252,11 @@ class Game:
             hr_good=r.hr_good,
         )
         self.say(f"Round {r.number} {'uploaded to the website' if ok else 'kept on the Pi (website not reachable)'}")
+
+    def _notify(self, player: str | None, r: RoundResult) -> None:
+        """Send the round to the Telegram bot (it messages the card's owner). Guests are skipped."""
+        if not self.notifier or not player:
+            return
+        from .notify import round_stats
+
+        self.notifier.send_round(player, round_stats(r, self.cfg.rounds, self.cfg.round_secs))

@@ -36,6 +36,7 @@ class SimConfig:
     rest_bpm: tuple[int, int] = (150, 175)  # first rest; drops each round
     start_delay: float = 1.0  # s after M,WAIT before the simulated player hits the bag 5 times
     hr_delay: float = 2.0  # s from M,REST until the player has a finger on the pulse sensor
+    card: str | None = None  # NFC card the simulated player taps before each game (None = guest)
     seed: int | None = None
 
 
@@ -70,6 +71,9 @@ class Simulator:
         elif board == "bag" and line.startswith("C,"):
             self._later(0, self._throw(proto.parse_combo(line)))
         elif board == "bag" and line == "M,WAIT":
+            if self.cfg.card:  # tap the card first, like a real player at the start screen
+                tap = json.dumps({"uid": self.cfg.card})
+                self._later(self.cfg.start_delay / 2, self._deliver("nfc", tap, 0))
             self._later(self.cfg.start_delay, self._start_hits())
         elif board == "bag" and line == "M,REST":
             self._later(self.cfg.hr_delay, self._heart_rate())

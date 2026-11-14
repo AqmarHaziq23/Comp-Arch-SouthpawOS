@@ -7,12 +7,13 @@ Runs as its own program on the Pi (like vision): if it stops, the game still wor
 It does two things at once:
   1. Talks to Telegram ("long polling": it keeps asking Telegram for new messages, so it
      works on a phone hotspot - no port forwarding or public address needed).
-  2. Listens for the HUB's messages on UDP 127.0.0.1:5006 (only programs on the same Pi
-     can send to it):
-        {"kind": "card",  "uid": "04A1B2C3"}                     a card was tapped
-        {"kind": "round", "uid": "04A1B2C3", "round": {...}}     a round finished
+  2. Listens on UDP 127.0.0.1:5007 (only programs on the same Pi can send to it) for:
+        {"uid": "04A1B2C3"}                                      NFC reader: a card was tapped
+        {"kind": "round", "uid": "04A1B2C3", "round": {...}}     hub: a round finished
+     (Port 5006 is the hub's own NFC port; the NFC reader sends each tap to both.)
 
-Until the NFC reader and hub are ready, use simulate.py to pretend to be the hub.
+To test without the NFC reader, use simulate.py; for rounds you can also run the hub's
+simulator: python -m southpaw play --sim --card 04A1B2C3 (in hub/).
 
 Setup: copy .env.example to .env and put your bot token from @BotFather in it.
 Run:   python bot.py
@@ -70,7 +71,7 @@ def main():
     if not token or token.startswith("put-"):
         raise SystemExit("No bot token: copy .env.example to .env and paste your token from @BotFather")
     host = os.environ.get("HUB_LISTEN_HOST", "127.0.0.1")
-    port = int(os.environ.get("HUB_LISTEN_PORT", "5006"))
+    port = int(os.environ.get("HUB_LISTEN_PORT", "5007"))
     storage = Storage(os.environ.get("DB_PATH", "players.db"))
 
     app = Application.builder().token(token).build()

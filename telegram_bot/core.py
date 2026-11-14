@@ -10,9 +10,10 @@ tested without a real Telegram bot. It handles:
     Only one link can be waiting at a time (there is one card reader). If a second
     player sends /link, they take over and the first is told to try again.
 
-  * Messages from the HUB (Member C) on the Pi:
-      {"kind": "card",  "uid": "04A1B2C3"}                     a card was tapped
-      {"kind": "round", "uid": "04A1B2C3", "round": {...}}     a round finished: send the summary
+  * Messages from other programs on the Pi (UDP, see bot.py):
+      {"uid": "04A1B2C3"}                                      NFC reader: a card was tapped
+      {"kind": "card",  "uid": "04A1B2C3"}                     (same thing, older form; simulate.py)
+      {"kind": "round", "uid": "04A1B2C3", "round": {...}}     hub: a round finished, send the summary
 
 Why a Telegram bot can't just use @usernames: bots may only message people who have
 opened the bot and pressed Start, and they do it by numeric chat id. That's why each
@@ -100,11 +101,13 @@ class SouthpawBot:
     # ------------------------------------------------------------------------------------
 
     async def handle_hub_message(self, message):
-        """Dispatch one message from the hub. Bad messages are logged and ignored."""
+        """Dispatch one message from the hub or NFC reader. Bad messages are logged and ignored."""
         if not isinstance(message, dict):
             log.warning("Ignoring hub message that isn't a JSON object: %r", message)
             return
-        kind = message.get("kind")
+        # The NFC reader sends the hub's protocol format, {"uid": ...} with no "kind":
+        # the exact same message goes to the hub (port 5006) and to this bot (port 5007)
+        kind = message.get("kind", "card" if "uid" in message else None)
         try:
             if kind == "card":
                 await self.card_tapped(message["uid"])

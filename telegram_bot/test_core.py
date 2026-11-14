@@ -15,7 +15,10 @@ from core import SouthpawBot
 from formatting import format_round
 from storage import Storage
 
-ROUND = {"duration_s": 125, "punches_thrown": 40, "punches_landed": 30}
+import json
+
+# A round in the hub's format (hub/southpaw/notify.py round_stats)
+ROUND = {"round": 1, "rounds": 3, "duration_s": 30, "thrown": 40, "landed": 30}
 
 
 class Clock:
@@ -50,7 +53,11 @@ async def run_tests():
     await bot.card_tapped("04A1B2C3")
     assert "Punch the bag" in sent[-1][1]
     assert await bot.round_finished("04A1B2C3", ROUND) is True
-    assert "Round complete" in sent[-1][1] and "75%" in sent[-1][1]
+    assert "Round 1 of 3 complete" in sent[-1][1] and "75%" in sent[-1][1]
+
+    # The NFC reader's own message format ({"uid": ...}, no "kind") counts as a tap too
+    await bot.handle_hub_message({"uid": "04A1B2C3"})
+    assert "Punch the bag" in sent[-1][1]
 
     # A /link request expires after 60 s
     await bot.start_link(222, "bob", "Bob")
@@ -71,7 +78,7 @@ async def run_tests():
     # /me, /last, /unlink
     assert "…B2C3" in bot.describe_links(333)
     assert "No card is linked" in bot.describe_links(111)
-    assert "Round complete" in bot.last_round(111, "Alice")
+    assert "Round 1 of 3 complete" in bot.last_round(111, "Alice")
     assert "No rounds yet" in bot.last_round(333, "Carol")
     assert "Unlinked 1" in bot.unlink(333)
     assert bot.storage.player_for_card("04A1B2C3") is None
@@ -90,7 +97,17 @@ async def run_tests():
 
     # Formatting copes with empty data and escapes anything that looks like HTML
     assert "No stats" in format_round({}, None)
-    assert "&lt;Bob&gt;" in format_round({"punches_thrown": 5}, "<Bob>")
+    assert "&lt;Bob&gt;" in format_round({"thrown": 5}, "<Bob>")
+
+    # The sample round shows every line; a shaky heart-rate reading is flagged;
+    # stats the bot doesn't know yet (e.g. future guard stats) still appear
+    with open("sample_round.json") as f:
+        full = format_round(json.load(f), "Alice")
+    for expected in ("Score: <b>120</b>", "14 landed / 18 thrown (78%)", "Combos: 4/6 correct",
+                     "Best streak: 3", "Rest heart rate: 142 bpm", "Round time: 0:30", "Uppercut"):
+        assert expected in full, expected
+    assert "rough reading" in format_round({"hr_bpm": 130, "hr_good": False})
+    assert "Guard pct: 82" in format_round({"guard_pct": 82})
 
 
 if __name__ == "__main__":
