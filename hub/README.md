@@ -48,6 +48,13 @@ Each round of a carded player also goes to Johanan's Telegram bot (`telegram_bot
 UDP `127.0.0.1:5007` (`southpaw/notify.py`), which messages the card's owner. If the bot
 isn't running the message is just lost; `--no-telegram` turns it off.
 
+**Guard stats** (`southpaw/guard.py`): Johanan's vision process sends `{"kind": "guard", "L": true,
+"R": false}` about 9 times a second (hands up in guard?). For each wrist punch, that hand's readings
+from 0.4 s before to 0.6 s after the peak are left out, because punching isn't dropping your guard. Each
+round then gets `guard_pct` (both hands together), `guard_pct_lead`, `guard_pct_rear` and `guard_drops` (a hand
+down for 0.4 s or more). They go to the Telegram bot. Without vision there are no guard stats.
+The simulator fakes guard messages too (`--no-vision` turns them off).
+
 Scoring per combo: 10 per punch with the right hand (and the right type, unless
 the wrist sent `X`), 5 per landed punch, +10 if the whole combo was right.
 

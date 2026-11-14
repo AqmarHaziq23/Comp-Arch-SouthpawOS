@@ -50,7 +50,8 @@ One JSON object per UDP datagram to `127.0.0.1:5007`:
 
 - The hub side is `hub/southpaw/notify.py`. Guest rounds (no card) aren't sent.
 - `round` uses the same names as the website upload: `round`, `rounds`, `duration_s`, `score`, `thrown`,
-  `landed`, `combos_called`, `combos_hit`, `best_streak`, `by_type`, `hr_bpm`, `hr_good`
+  `landed`, `combos_called`, `combos_hit`, `best_streak`, `by_type`, `hr_bpm`, `hr_good`, plus the guard
+  stats from vision when it's running: `guard_pct`, `guard_pct_lead`, `guard_pct_rear`, `guard_drops`
   (see `sample_round.json`). Every stat is optional, and **any other field is still shown** under
   "Other stats", so new data (e.g. guard stats) appears without changing the bot first.
 - `{"kind": "card", "uid": ...}` is also accepted as a tap.
