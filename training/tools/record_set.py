@@ -6,8 +6,8 @@
     python training/tools/record_set.py --hand L --person ys --port COM5
     python training/tools/record_set.py --hand R --person ym --only cross,hook
 
-1. Checks the board is mounted the standard way (palm side, screen out, USB port towards the
-   elbow, edges along the forearm) from gravity in two still poses.
+1. Checks the board is mounted the standard way (in the wrist case, palm side of the forearm,
+   edges along the forearm) from gravity in two still poses.
 2. Walks through the set: for each file it says what to do, waits for Enter, beeps three times
    (get ready), then a long beep (go). Two beeps = stop. The person punching never needs to see
    the laptop.
@@ -44,11 +44,17 @@ WHAT_TO_DO = {
     "idle": "Guard up, bounce on your feet, move around, breathe. No punches.",
 }
 
-# Gravity on a correctly mounted board (palm side, screen out, USB port towards the elbow).
-POSES = [
-    ("Elbow on the table, forearm pointing straight UP, fist closed, palm facing you.", "x", +1),
-    ("Forearm flat on the table, PALM UP, fist closed.", "z", -1),
-]
+# Gravity on a correctly mounted board: in the wrist case, on the palm side of the forearm, screen
+# the right way up for the wearer. Measured 14 Nov with the case: the board's y axis runs along the
+# forearm, x across it, z out of the palm. The left case is turned 180 degrees flat on the arm
+# compared with the right (so its screen reads the right way), which flips y.
+# (pose, axis that should read 1 g, its sign, axis that should read ~0)
+FOREARM_UP = "Elbow on the table, forearm pointing straight UP, fist closed, palm facing you."
+PALM_UP = "Forearm flat on the table, PALM UP, fist closed."
+POSES = {
+    "R": [(FOREARM_UP, "y", -1, "x"), (PALM_UP, "z", -1, None)],
+    "L": [(FOREARM_UP, "y", +1, "x"), (PALM_UP, "z", -1, None)],
+}
 MAX_TWIST_G = 0.25        # sideways gravity allowed in the forearm-up pose (about 15 degrees)
 
 
@@ -81,25 +87,27 @@ def read_gravity(ser, seconds=3.0):
     return [statistics.mean(v) / log_accel.COUNTS_PER_G for v in (xs, ys, zs)]
 
 
-def check_mount(ser):
-    """True if the board sits the standard way; explains what's wrong if not."""
+def check_mount(ser, hand):
+    """True if the board sits the standard way for this hand; explains what's wrong if not."""
     ok = True
-    for i, (pose, axis, sign) in enumerate(POSES, 1):
-        input(f"\nMount check {i}/{len(POSES)}: {pose}\n  Hold still and press Enter... ")
+    for i, (pose, axis, sign, side) in enumerate(POSES[hand], 1):
+        input(f"\nMount check {i}/{len(POSES[hand])}: {pose}\n  Hold still and press Enter... ")
         g = dict(zip("xyz", read_gravity(ser)))
         print(f"  gravity x={g['x']:+.2f} y={g['y']:+.2f} z={g['z']:+.2f} g")
         if g[axis] * sign < 0.8:
             ok = False
-            if axis == "x" and g["x"] < -0.8:
-                print("  -> The board is the wrong way round: the USB port must point towards the ELBOW.")
-            elif axis == "z" and g["z"] > 0.8:
-                print("  -> The screen faces the wrong way: the board must be on the PALM side, screen facing out.")
+            if g[axis] * sign < -0.8 and axis == "z":
+                print("  -> The case faces the wrong way: it must be on the PALM side of the forearm.")
+            elif g[axis] * sign < -0.8:
+                print("  -> The case is on back to front: turn it end over end on the forearm.")
+            elif side and abs(g[side]) > 0.8:
+                print("  -> The case is turned sideways on the arm: its long edges must run along the forearm.")
             else:
-                print(f"  -> Expected about {sign:+d} g on {axis}. Check the board's position and that the arm "
+                print(f"  -> Expected about {sign:+d} g on {axis}. Check the case's position and that the arm "
                       "is held as described.")
-        if axis == "x" and abs(g["y"]) > MAX_TWIST_G:
+        elif side and abs(g[side]) > MAX_TWIST_G:
             ok = False
-            print(f"  -> The board is twisted about {abs(g['y']) * 57:.0f} degrees on the arm. Turn it so its "
+            print(f"  -> The case is twisted about {abs(g[side]) * 57:.0f} degrees on the arm. Turn it so its "
                   "edges run along the forearm.")
     print("\nMount OK." if ok else "\nFix the mounting and run the check again (or c to carry on anyway).")
     return ok
@@ -148,7 +156,7 @@ def main():
     with log_accel.serial.Serial(port, log_accel.BAUD, timeout=1) as ser:
         time.sleep(0.5)
         if not args.skip_check:
-            while not check_mount(ser):
+            while not check_mount(ser, args.hand):
                 if input("  Enter = check again, c = carry on anyway: ").strip().lower() == "c":
                     break
 
