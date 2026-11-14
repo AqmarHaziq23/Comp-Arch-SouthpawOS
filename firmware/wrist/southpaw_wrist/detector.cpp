@@ -8,7 +8,6 @@
 enum DetState : uint8_t { DET_IDLE, DET_SEARCH, DET_POST };
 
 static DetState state = DET_IDLE;
-static bool prevAbove = false;
 static uint32_t triggerIdx = 0;
 static uint32_t peakIdx = 0;
 static uint32_t peakMag2 = 0;
@@ -17,7 +16,6 @@ static uint32_t dropped = 0;
 
 void detector_reset() {
   state = DET_IDLE;
-  prevAbove = false;
   triggerIdx = peakIdx = peakMag2 = cooldownUntil = 0;
   dropped = 0;
 }
@@ -27,7 +25,9 @@ bool detector_feed(uint32_t i, uint32_t mag2, DetectorEvent& ev) {
   bool ready = false;
 
   if (state == DET_IDLE) {
-    if (above && !prevAbove && (int32_t)(i - cooldownUntil) >= 0) {
+    // Above the threshold once the cooldown is over, not only on a fresh rise: in a combo the arm
+    // often stays above 3 g from one punch straight into the next (jab pull-back into the hook).
+    if (above && (int32_t)(i - cooldownUntil) >= 0) {
       triggerIdx = i;
       peakIdx = i;
       peakMag2 = mag2;
@@ -56,7 +56,6 @@ bool detector_feed(uint32_t i, uint32_t mag2, DetectorEvent& ev) {
     }
   }
 
-  prevAbove = above;
   return ready;
 }
 

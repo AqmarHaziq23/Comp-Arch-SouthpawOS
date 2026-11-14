@@ -64,19 +64,25 @@ If the board stops accepting uploads, use bootloader mode:
 ```bash
 pip install pyserial matplotlib
 cd training/tools
+python record_set.py --hand R --person ym                   # a person's whole set for one wrist (14 files)
+python record_set.py --hand L --person ym --only hook       # just some labels
 python log_accel.py --list                                  # find the port if auto-detect fails
-python log_accel.py --label jab --hand L --person ym        # 20 s recording, 3 s countdown
-python log_accel.py --label cross --hand R --person ym --seconds 30
+python log_accel.py --label jab --hand L --person ym        # one 20 s file, 3 s countdown
 python plot_accel.py ../data/raw/ym_L_jab_*.csv
 ```
+
+`record_set.py` is the quick way to record someone: it checks the mounting from gravity in two still poses, then goes through 3 files per punch type plus `offhand`, `pullback` ×2, `strap` and `idle`. Before each file it says what to do and waits for Enter; then **3 short beeps = get ready, 1 long beep = go, 2 short beeps = stop**, so the person punching doesn't need to watch the laptop. After each file it says how many punches the board would have detected, and `r` redoes the previous file (the old one goes to `raw/discarded/`, which training ignores).
 
 **How to record so the data is useful later:**
 - **One punch type per file.** Throw about **10 punches per file, with 1–2 s of guard between each**, and do 3 files per type (≈30 of each).
 - **Labels:** `jab`, `cross`, `hook`, `uppercut`, plus four kinds of "not a punch": `idle` (guard, bouncing), `offhand` (the board's arm while the *other* hand punches: the body turn can snap it past the trigger), `pullback` (pulling the arm back, feints, guard resets) and `strap` (putting the board on: adjusting the wrap, shaking the hand out, tapping the board). All of them teach the classifier what *not* to count.
-- **Same stance and mounting every time, for everyone.** The classifier learns which way the axes point, so the board must sit the same way on every person:
-  - on the **back of the wrist**, just behind the wrist joint, held on with a hand wrap or strap;
-  - **screen facing out**, **USB port pointing towards the elbow**;
+- **Combos:** `combo-<numbers>` (e.g. `--label combo-123` for jab-cross-hook, orthodox numbering 1-6) is the same combo thrown over and over with about 2 s of guard between combos. Training splits the file into combos and labels each punch by its place; each board keeps only its own hand's punches, and a combo with the wrong punch count is left out. Punches in a combo start from where the last one left the arm, so they look different from single punches. Record `offhand` on one board while the *other* hand throws two-punch combos too: the body turn swings the idle arm hard (the left board sent a fake 11-14 g punch in 6 of 9 right-hand double combos until it had these).
+- **Same stance and mounting every time, for everyone.** The classifier learns which way the axes point and how much each part of the arm moves, so the board must sit the same way on every person:
+  - on the **palm side of the forearm** (the inside of the arm), in the case and strap;
+  - the case's long edges **running along the forearm** (not twisted), **screen the right way up for the wearer**. Inside the case the board sits turned 90° from the old bare mounting: its **y axis runs along the forearm** and x across it. For the screen to read the right way, the left case sits turned 180° flat on the arm compared with the right one, so the two arms' y axes point opposite ways (each hand has its own model, so that's fine as long as it's always the same);
   - the same position on either arm. Move it to the rear wrist (`--hand R` for an orthodox boxer) for crosses and rear hooks and uppercuts.
+  - `record_set.py` checks this before recording. Forearm straight up: gravity on −y for the right arm, +y for the left, and under 0.25 g on x (a twist of about 15°). Forearm flat, palm up: gravity on −z. (Measured with the case on 14 Nov.)
+  - **Why it matters:** the first recordings (11 Nov) had the board on the back of the wrist. Moving it to the palm side, a little further up the arm, changed the signals so much that the old model got 1 of 9 hooks right, and flipping the old data's axes didn't fix it. Those recordings are kept in `training/data/raw/back_of_wrist/`; training only reads files directly in `training/data/raw/`.
   - Tape the USB cable at the wrist and above the elbow with slack between, and stand with the laptop on the punching arm's side, so hooks don't pull the plug out.
 - **Record 2–3 teammates** too (`--person ys`, `--person zh`, …), so the classifier isn't tuned only to you.
 - Start shadowboxing. Light bag work comes later.
@@ -111,7 +117,7 @@ python training/tools/train_classifier.py --trees 1 --depth 3 --show-tree   # on
 
 It cuts every recording with `segment_punches.py`, so it trains on exactly the integers the board computes, and trains **one model per hand** (orthodox): left = jab / hook / uppercut / not a punch, right = cross / hook / uppercut / not a punch. `idle`, `offhand`, `pullback` and `strap` files are "not a punch".
 
-The model is a **random forest of 20 trees, depth 5** (each tree votes; the board takes the highest average). A single depth-3 tree was tried first; once pull-back and strap recordings were added it let 13 of 45 "not a punch" movements through on the left wrist, while the forest let 2 through. The cost is a few more hooks called uppercuts (left: 126/143 correct on unseen files; right: 99/106, against 92/106 for the single tree). With the forest the whole sketch is about 43 KB of the 256 KB flash, and the forest runs once per punch.
+The model is a **random forest of 20 trees, depth 5** (each tree votes; the board takes the highest average). A single depth-3 tree was tried first (on the back-of-wrist recordings of 11 Nov); once pull-back and strap recordings were added it let 13 of 45 "not a punch" movements through on the left wrist, while the forest let 2 through. The cost is a few more hooks called uppercuts (left: 126/143 correct on unseen files; right: 99/106, against 92/106 for the single tree). With the forest the whole sketch is about 43 KB of the 256 KB flash, and the forest runs once per punch.
 
 Testing is **leave-one-file-out**: every file is predicted by a model that never saw it, so punches from the same 20 s recording are never on both sides. It prints accuracy, recall and precision per type, a confusion table, accuracy per person (once there is more than one) and the features the model relies on.
 
@@ -178,7 +184,7 @@ USB (Serial Monitor at 115200, or any program that opens the port):
 |---|---|---|
 | `DETECT_THRESHOLD_COUNTS` | 96 (3 g) | Trigger when total acceleration rises to this (gravity included). **Starting guess: tune with recordings.** |
 | `PEAK_SEARCH_MS` | 150 | After a trigger, the peak is the largest sample in this time. 100 missed the real snap when a slow wind-up set off the trigger first. |
-| `COOLDOWN_MS` | 400 | No new trigger until this long after the peak. 300 double-counted: a punch's stop/retract burst came up to 250 ms after the peak. |
+| `COOLDOWN_MS` | 350 | No new trigger until this long after the peak. After it, a new punch starts whenever acceleration is above the threshold, not only when it rises past it: in a jab-cross-hook the arm never drops below 3 g between the jab and the hook (hook peak 0.38-0.45 s after the jab), and the old rise-only rule missed 6 of 9 hooks. 300 also triggered on the pull-back about 0.3 s after an uppercut (left hook-uppercut combos: 6 of 7 had an extra punch). |
 | `WINDOW_PRE_MS` / `WINDOW_POST_MS` | 150 / 250 | Samples handed to the features step, around the peak. The punch message goes out about `WINDOW_POST_MS` after the peak. |
 | `MIN_BURST_MS` | 20 | Shorter bursts are knocks (putting the board down), not punches. |
 | `BURST_THRESHOLD_COUNTS`, `GRAVITY_AVG_MS` | 48 (1.5 g), 50 | Feature settings: burst length and the before/after tilt averages. |

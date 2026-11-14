@@ -15,6 +15,14 @@ integers the board computes. Labels come from the file names:
 
     jab -> J, cross -> C, hook -> H, uppercut -> U,
     idle / offhand / pullback / strap -> N (not a punch)
+    combo-<numbers>, e.g. combo-123 -> each punch labelled by its place in the combo
+
+A combo file holds the same combo thrown over and over, with a pause between combos.
+Its punches are split into combos at gaps of more than COMBO_GAP_MS, and each board only
+counts its own hand's punches (orthodox numbering: 1 jab, 2 cross, 3 lead hook, 4 rear hook,
+5 lead uppercut, 6 rear uppercut). So combo-123 on the left board is jab, hook and on the right
+board cross. A combo where the board found a different number of punches is left out rather
+than guessed.
 
 One model per hand (orthodox stance): the left board chooses J/H/U/N, the right C/H/U/N.
 
@@ -36,6 +44,8 @@ import segment_punches as sp  # noqa: E402
 LABEL_CODE = {"jab": "J", "cross": "C", "hook": "H", "uppercut": "U",
               "idle": "N", "offhand": "N", "pullback": "N", "strap": "N"}
 CLASSES = {"L": ["J", "H", "U", "N"], "R": ["C", "H", "U", "N"]}
+COMBO_NUMBER = {"1": ("L", "J"), "2": ("R", "C"), "3": ("L", "H"), "4": ("R", "H"), "5": ("L", "U"), "6": ("R", "U")}
+COMBO_GAP_MS = 900          # more than this between two punches = the next combo
 CLASS_NAME = {"J": "jab", "C": "cross", "H": "hook", "U": "uppercut", "N": "not a punch"}
 
 # Every value the board has in PunchFeatures (features.cpp), as integers.
@@ -67,8 +77,22 @@ MODEL_H = MODEL_C.with_suffix(".h")
 def load_punches(c):
     """Every punch in training/data/raw/ as (features, code, file, person, hand)."""
     rows, skipped = [], collections.Counter()
+    combos_used = combos_left_out = 0
     for path in sorted(sp.RAW_DIR.glob("*.csv")):
         meta = sp.parse_name(path)
+        if meta["label"].startswith("combo-"):
+            _, punches, _ = sp.process(path, c)
+            labelled, left_out = combo_labels(punches or [], meta["label"][len("combo-"):], meta["hand"])
+            if labelled is None:
+                skipped[meta["label"]] += 1
+                continue
+            combos_used += len(labelled)
+            combos_left_out += left_out
+            for combo in labelled:
+                for f, code in combo:
+                    vec = [AXIS_INDEX[f[k]] if k == "dom_axis" else int(f[k]) for k in FEATURES]
+                    rows.append((vec, code, path.name, meta["person"], meta["hand"]))
+            continue
         code = LABEL_CODE.get(meta["label"])
         if code is None:
             skipped[meta["label"]] += 1
@@ -79,7 +103,29 @@ def load_punches(c):
             rows.append((vec, code, path.name, meta["person"], meta["hand"]))
     for label, n in skipped.items():
         print(f"(skipped {n} file(s) labelled '{label}': not a known label)")
+    if combos_used or combos_left_out:
+        print(f"(combo files: {combos_used} combos used, {combos_left_out} left out because the punch count didn't match)")
     return rows
+
+
+def combo_labels(punches, numbers, hand):
+    """Split a combo file's punches into combos and label them by position.
+
+    Returns (list of combos as [(punch, code), ...], combos left out), or (None, 0) if the
+    label isn't a valid combo."""
+    if not numbers or any(n not in COMBO_NUMBER for n in numbers):
+        return None, 0
+    expected = [code for n in numbers for h, code in [COMBO_NUMBER[n]] if h == hand]
+    if not expected:
+        return None, 0
+    groups = []
+    for f in punches:
+        if groups and f["peak_ms"] - groups[-1][-1]["peak_ms"] <= COMBO_GAP_MS:
+            groups[-1].append(f)
+        else:
+            groups.append([f])
+    good = [list(zip(g, expected)) for g in groups if len(g) == len(expected)]
+    return good, len(groups) - len(good)
 
 
 def make_model(depth, trees):
@@ -174,6 +220,9 @@ def main():
     for hand in [args.hand] if args.hand else ["L", "R"]:
         X, y, files, people = hand_data(rows, hand, args.features)
         classes = CLASSES[hand]
+        if len(set(files)) < 2:
+            sys.exit(f"{hand} hand: {len(set(files))} recording(s) in {sp.RAW_DIR}. Record at least two files first "
+                     "(older back-of-wrist recordings in back_of_wrist/ are not used).")
         wrong = sorted({cl for cl in y if cl not in classes})
         if wrong:
             sys.exit(f"{hand} hand has punches labelled {wrong}, which that hand can't throw (orthodox). Check the file names.")
