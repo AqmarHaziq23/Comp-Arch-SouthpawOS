@@ -97,14 +97,14 @@ def mag2(s):
 
 def detect(samples, c):
     """detector.cpp: returns (peak indices of complete windows, dropped at start, pending at end)."""
-    state, prev_above = "IDLE", False
+    state = "IDLE"
     trigger = peak = peak_mag2 = cooldown_until = 0
     peaks, dropped = [], 0
     for i, s in enumerate(samples):
         m2 = mag2(s)
         above = m2 >= c["DETECT_THRESHOLD_SQ"]
         if state == "IDLE":
-            if above and not prev_above and i >= cooldown_until:
+            if above and i >= cooldown_until:      # above once the cooldown is over, not only on a fresh rise
                 trigger, peak, peak_mag2, state = i, i, m2, "SEARCH"
         elif state == "SEARCH":
             if m2 > peak_mag2:                      # strictly greater: first of equal peaks wins
@@ -117,7 +117,6 @@ def detect(samples, c):
                 peaks.append(peak)
             else:
                 dropped += 1
-        prev_above = above
     pending = 1 if state != "IDLE" else 0             # the board would finish it after the file ends
     return peaks, dropped, pending
 

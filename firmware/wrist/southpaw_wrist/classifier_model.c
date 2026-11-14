@@ -12,7 +12,7 @@ static void mul_vector_number(double *v1, double num, int size, double *result) 
         result[i] = v1[i] * num;
 }
 
-// L hand: 129/137 correct on unseen files; 13 files, 1 person(s); J 30, H 30, U 30, N 47
+// L hand: 232/243 correct on unseen files; 21 files, 1 person(s); J 75, H 61, U 58, N 49
 // Output order: HJNU (the board picks the first largest, as scikit-learn does).
 const char CLASSIFIER_CLASSES_L[] = "HJNU";
 void classifier_score_L(double * input, double * output) {
@@ -37,446 +37,682 @@ void classifier_score_L(double * input, double * output) {
     double var18[4];
     double var19[4];
     double var20[4];
-    if (input[4] <= -15.0) {
-        if (input[20] <= 204.0) {
+    if (input[4] <= -13.0) {
+        if (input[20] <= 211.0) {
             memcpy(var20, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
         } else {
-            memcpy(var20, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
-        }
-    } else {
-        if (input[15] <= -141.5) {
-            if (input[15] <= -234.0) {
-                if (input[20] <= 319.5) {
-                    if (input[8] <= -32.0) {
-                        memcpy(var20, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                    } else {
-                        memcpy(var20, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                    }
+            if (input[9] <= 10.5) {
+                if (input[19] <= -22.5) {
+                    memcpy(var20, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
                 } else {
                     memcpy(var20, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 }
             } else {
-                if (input[6] <= 13.0) {
-                    if (input[16] <= -75.5) {
-                        memcpy(var20, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                    } else {
-                        memcpy(var20, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                    }
+                if (input[13] <= 103.5) {
+                    memcpy(var20, (double[]){0.0, 0.5, 0.0, 0.5}, 4 * sizeof(double));
                 } else {
-                    if (input[16] <= -60.5) {
-                        memcpy(var20, (double[]){0.9629629629629629, 0.0, 0.037037037037037035, 0.0}, 4 * sizeof(double));
-                    } else {
-                        memcpy(var20, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
-                    }
+                    memcpy(var20, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
                 }
             }
+        }
+    } else {
+        if (input[1] <= 0.5) {
+            if (input[20] <= 203.0) {
+                memcpy(var20, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var20, (double[]){0.0, 0.0, 0.8333333333333334, 0.16666666666666666}, 4 * sizeof(double));
+            }
         } else {
-            memcpy(var20, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            if (input[9] <= 7.5) {
+                if (input[12] <= 104.5) {
+                    memcpy(var20, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    if (input[3] <= 300.0) {
+                        memcpy(var20, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var20, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                if (input[14] <= -6.5) {
+                    if (input[4] <= 11.0) {
+                        memcpy(var20, (double[]){0.7692307692307693, 0.0, 0.07692307692307693, 0.15384615384615385}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var20, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    memcpy(var20, (double[]){0.0, 0.0, 0.5, 0.5}, 4 * sizeof(double));
+                }
+            }
         }
     }
     double var21[4];
-    if (input[3] <= 295.0) {
-        if (input[13] <= 110.5) {
-            if (input[1] <= 0.5) {
-                memcpy(var21, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-            } else {
-                if (input[6] <= 22.0) {
-                    if (input[5] <= 18.5) {
-                        memcpy(var21, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                    } else {
+    if (input[3] <= 292.5) {
+        if (input[13] <= 109.0) {
+            if (input[20] <= 232.0) {
+                if (input[6] <= 11.5) {
+                    memcpy(var21, (double[]){0.3333333333333333, 0.0, 0.3333333333333333, 0.3333333333333333}, 4 * sizeof(double));
+                } else {
+                    if (input[5] <= 9.5) {
                         memcpy(var21, (double[]){0.0, 0.0, 0.6666666666666666, 0.3333333333333333}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var21, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                if (input[14] <= -34.0) {
+                    if (input[18] <= -2.5) {
+                        memcpy(var21, (double[]){0.0, 0.5714285714285714, 0.42857142857142855, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var21, (double[]){0.0625, 0.0, 0.0, 0.9375}, 4 * sizeof(double));
                     }
                 } else {
-                    memcpy(var21, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    if (input[9] <= 12.0) {
+                        memcpy(var21, (double[]){0.0, 0.0, 0.3333333333333333, 0.6666666666666666}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var21, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
                 }
             }
         } else {
-            memcpy(var21, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[6] <= -9.0) {
+                memcpy(var21, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var21, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         }
     } else {
-        if (input[17] <= -127.5) {
-            memcpy(var21, (double[]){0.3333333333333333, 0.6666666666666666, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[0] <= 210.5) {
+            if (input[12] <= 115.0) {
+                memcpy(var21, (double[]){0.4, 0.2, 0.4, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var21, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         } else {
-            memcpy(var21, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[4] <= -17.5) {
+                memcpy(var21, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var21, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         }
     }
     add_vectors(var20, var21, 4, var19);
     double var22[4];
-    if (input[3] <= 295.0) {
-        if (input[8] <= 3.5) {
-            memcpy(var22, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+    if (input[3] <= 92.5) {
+        memcpy(var22, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+    } else {
+        if (input[18] <= 82.5) {
+            if (input[20] <= 311.0) {
+                memcpy(var22, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var22, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         } else {
-            if (input[20] <= 233.0) {
-                if (input[1] <= 0.5) {
-                    memcpy(var22, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            if (input[9] <= 8.5) {
+                if (input[9] <= 7.5) {
+                    if (input[14] <= -12.5) {
+                        memcpy(var22, (double[]){0.015873015873015872, 0.0, 0.0, 0.9841269841269841}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var22, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
+                    }
                 } else {
-                    memcpy(var22, (double[]){0.25, 0.25, 0.5, 0.0}, 4 * sizeof(double));
+                    if (input[5] <= 42.0) {
+                        memcpy(var22, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var22, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
                 }
             } else {
-                if (input[9] <= 4.5) {
-                    memcpy(var22, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                if (input[4] <= -11.5) {
+                    if (input[7] <= 2.5) {
+                        memcpy(var22, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var22, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
+                    }
                 } else {
-                    memcpy(var22, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                    if (input[3] <= 200.0) {
+                        memcpy(var22, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var22, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
                 }
             }
-        }
-    } else {
-        if (input[14] <= -59.5) {
-            memcpy(var22, (double[]){0.5, 0.5, 0.0, 0.0}, 4 * sizeof(double));
-        } else {
-            memcpy(var22, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
         }
     }
     add_vectors(var19, var22, 4, var18);
     double var23[4];
-    if (input[2] <= 0.0) {
-        if (input[4] <= -5.0) {
-            memcpy(var23, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
-        } else {
-            memcpy(var23, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-        }
-    } else {
-        if (input[3] <= 295.0) {
-            if (input[12] <= 120.0) {
+    if (input[11] <= 244.5) {
+        if (input[4] <= 19.5) {
+            if (input[3] <= 97.5) {
                 memcpy(var23, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
             } else {
-                memcpy(var23, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                if (input[12] <= 113.0) {
+                    if (input[10] <= 42.0) {
+                        memcpy(var23, (double[]){0.0, 0.05263157894736842, 0.9473684210526315, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var23, (double[]){0.0, 0.8888888888888888, 0.1111111111111111, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[8] <= 19.5) {
+                        memcpy(var23, (double[]){0.3157894736842105, 0.0, 0.0, 0.6842105263157895}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var23, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                }
             }
         } else {
-            if (input[3] <= 307.5) {
-                memcpy(var23, (double[]){0.6666666666666666, 0.0, 0.3333333333333333, 0.0}, 4 * sizeof(double));
+            if (input[4] <= 54.0) {
+                if (input[3] <= 257.5) {
+                    if (input[15] <= -298.0) {
+                        memcpy(var23, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var23, (double[]){0.5, 0.0, 0.16666666666666666, 0.3333333333333333}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[11] <= 127.5) {
+                        memcpy(var23, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var23, (double[]){0.8, 0.0, 0.1, 0.1}, 4 * sizeof(double));
+                    }
+                }
             } else {
-                memcpy(var23, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                if (input[20] <= 328.0) {
+                    if (input[8] <= 27.5) {
+                        memcpy(var23, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var23, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[6] <= -14.5) {
+                        memcpy(var23, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var23, (double[]){0.75, 0.0, 0.0, 0.25}, 4 * sizeof(double));
+                    }
+                }
             }
         }
+    } else {
+        memcpy(var23, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
     }
     add_vectors(var18, var23, 4, var17);
     double var24[4];
-    if (input[4] <= -15.0) {
+    if (input[4] <= -20.5) {
         if (input[1] <= 0.5) {
-            memcpy(var24, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-        } else {
-            memcpy(var24, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
-        }
-    } else {
-        if (input[20] <= 235.5) {
-            if (input[15] <= -143.0) {
-                if (input[13] <= 34.0) {
-                    if (input[7] <= 27.5) {
-                        memcpy(var24, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                    } else {
-                        memcpy(var24, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                    }
-                } else {
-                    memcpy(var24, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                }
-            } else {
+            if (input[20] <= 260.0) {
                 memcpy(var24, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var24, (double[]){0.0, 0.5, 0.0, 0.5}, 4 * sizeof(double));
             }
         } else {
-            if (input[8] <= -32.0) {
-                memcpy(var24, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[3] <= 325.0) {
+                if (input[13] <= 78.5) {
+                    memcpy(var24, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var24, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                }
             } else {
                 memcpy(var24, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            }
+        }
+    } else {
+        if (input[12] <= 113.0) {
+            if (input[9] <= 26.5) {
+                if (input[16] <= -1.5) {
+                    memcpy(var24, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var24, (double[]){0.0, 0.3333333333333333, 0.6666666666666666, 0.0}, 4 * sizeof(double));
+                }
+            } else {
+                memcpy(var24, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
+            }
+        } else {
+            if (input[16] <= -88.0) {
+                if (input[8] <= 47.5) {
+                    if (input[3] <= 222.5) {
+                        memcpy(var24, (double[]){0.2, 0.0, 0.0, 0.8}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var24, (double[]){0.9661016949152542, 0.0, 0.0, 0.03389830508474576}, 4 * sizeof(double));
+                    }
+                } else {
+                    memcpy(var24, (double[]){0.25, 0.0, 0.0, 0.75}, 4 * sizeof(double));
+                }
+            } else {
+                if (input[3] <= 275.0) {
+                    memcpy(var24, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                } else {
+                    if (input[13] <= 78.0) {
+                        memcpy(var24, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var24, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                }
             }
         }
     }
     add_vectors(var17, var24, 4, var16);
     double var25[4];
-    if (input[4] <= -15.0) {
-        if (input[12] <= 66.5) {
-            if (input[18] <= 107.5) {
-                memcpy(var25, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-            } else {
-                memcpy(var25, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
-            }
-        } else {
-            if (input[15] <= -246.0) {
-                memcpy(var25, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
-            } else {
-                memcpy(var25, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
-            }
-        }
-    } else {
-        if (input[16] <= -83.5) {
-            if (input[4] <= 7.5) {
-                if (input[8] <= 9.0) {
-                    memcpy(var25, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                } else {
-                    memcpy(var25, (double[]){0.0, 0.0, 0.6666666666666666, 0.3333333333333333}, 4 * sizeof(double));
-                }
-            } else {
-                if (input[14] <= -55.0) {
-                    memcpy(var25, (double[]){0.75, 0.0, 0.0, 0.25}, 4 * sizeof(double));
-                } else {
-                    memcpy(var25, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                }
-            }
-        } else {
-            if (input[5] <= 11.5) {
-                if (input[6] <= 19.5) {
-                    memcpy(var25, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+    if (input[4] <= -21.0) {
+        if (input[12] <= 190.5) {
+            if (input[1] <= 0.5) {
+                if (input[4] <= -60.5) {
+                    memcpy(var25, (double[]){0.0, 0.25, 0.0, 0.75}, 4 * sizeof(double));
                 } else {
                     memcpy(var25, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
                 }
             } else {
-                if (input[3] <= 290.0) {
-                    if (input[8] <= 13.0) {
-                        memcpy(var25, (double[]){0.0, 0.0, 0.5, 0.5}, 4 * sizeof(double));
+                memcpy(var25, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
+        } else {
+            if (input[13] <= 101.5) {
+                memcpy(var25, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var25, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
+        }
+    } else {
+        if (input[8] <= 7.0) {
+            if (input[3] <= 285.0) {
+                if (input[17] <= -50.0) {
+                    memcpy(var25, (double[]){0.0, 0.0, 0.75, 0.25}, 4 * sizeof(double));
+                } else {
+                    memcpy(var25, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                }
+            } else {
+                memcpy(var25, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
+        } else {
+            if (input[10] <= 48.5) {
+                if (input[15] <= -253.5) {
+                    memcpy(var25, (double[]){0.0, 0.6666666666666666, 0.0, 0.3333333333333333}, 4 * sizeof(double));
+                } else {
+                    memcpy(var25, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                }
+            } else {
+                if (input[4] <= 39.5) {
+                    if (input[6] <= 16.0) {
+                        memcpy(var25, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var25, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                        memcpy(var25, (double[]){0.5, 0.0, 0.25, 0.25}, 4 * sizeof(double));
                     }
                 } else {
-                    memcpy(var25, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    if (input[0] <= 254.0) {
+                        memcpy(var25, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var25, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    }
                 }
             }
         }
     }
     add_vectors(var16, var25, 4, var15);
     double var26[4];
-    if (input[13] <= 110.0) {
-        if (input[13] <= 29.5) {
-            if (input[15] <= -154.5) {
-                if (input[8] <= 6.0) {
-                    memcpy(var26, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                } else {
-                    memcpy(var26, (double[]){0.6666666666666666, 0.0, 0.0, 0.3333333333333333}, 4 * sizeof(double));
-                }
-            } else {
-                if (input[9] <= 11.5) {
-                    memcpy(var26, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-                } else {
-                    memcpy(var26, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
-                }
-            }
-        } else {
-            if (input[18] <= 107.5) {
-                memcpy(var26, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-            } else {
-                if (input[5] <= 3.5) {
-                    if (input[19] <= -55.0) {
-                        memcpy(var26, (double[]){0.6666666666666666, 0.0, 0.0, 0.3333333333333333}, 4 * sizeof(double));
-                    } else {
+    if (input[13] <= 110.5) {
+        if (input[10] <= 67.5) {
+            if (input[15] <= -143.5) {
+                if (input[17] <= 190.0) {
+                    if (input[9] <= 15.5) {
                         memcpy(var26, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var26, (double[]){0.875, 0.0, 0.125, 0.0}, 4 * sizeof(double));
                     }
                 } else {
-                    if (input[3] <= 205.0) {
-                        memcpy(var26, (double[]){0.0, 0.0, 0.75, 0.25}, 4 * sizeof(double));
-                    } else {
+                    if (input[11] <= 165.0) {
                         memcpy(var26, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var26, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                memcpy(var26, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            }
+        } else {
+            if (input[9] <= 8.5) {
+                if (input[12] <= 205.5) {
+                    memcpy(var26, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var26, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                }
+            } else {
+                if (input[16] <= -66.0) {
+                    memcpy(var26, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    if (input[12] <= 83.0) {
+                        memcpy(var26, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var26, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
                     }
                 }
             }
         }
     } else {
-        memcpy(var26, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[9] <= 3.0) {
+            memcpy(var26, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+        } else {
+            memcpy(var26, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        }
     }
     add_vectors(var15, var26, 4, var14);
     double var27[4];
     if (input[3] <= 307.5) {
-        if (input[9] <= 7.5) {
-            if (input[10] <= 26.5) {
-                memcpy(var27, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-            } else {
-                memcpy(var27, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-            }
-        } else {
-            if (input[0] <= 242.0) {
-                if (input[8] <= 2.5) {
-                    if (input[7] <= 21.5) {
-                        memcpy(var27, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+        if (input[6] <= 53.5) {
+            if (input[0] <= 248.0) {
+                if (input[14] <= -42.5) {
+                    if (input[8] <= 7.0) {
+                        memcpy(var27, (double[]){0.0, 0.0, 0.041666666666666664, 0.9583333333333334}, 4 * sizeof(double));
                     } else {
-                        memcpy(var27, (double[]){0.6666666666666666, 0.0, 0.3333333333333333, 0.0}, 4 * sizeof(double));
+                        memcpy(var27, (double[]){0.0, 0.1, 0.9, 0.0}, 4 * sizeof(double));
                     }
                 } else {
-                    memcpy(var27, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    if (input[18] <= 87.5) {
+                        memcpy(var27, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var27, (double[]){0.13333333333333333, 0.0, 0.13333333333333333, 0.7333333333333333}, 4 * sizeof(double));
+                    }
                 }
             } else {
+                if (input[17] <= -27.5) {
+                    if (input[12] <= 189.0) {
+                        memcpy(var27, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var27, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[13] <= 67.0) {
+                        memcpy(var27, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var27, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    }
+                }
+            }
+        } else {
+            if (input[15] <= -346.0) {
                 memcpy(var27, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var27, (double[]){0.0, 0.6666666666666666, 0.3333333333333333, 0.0}, 4 * sizeof(double));
             }
         }
     } else {
-        memcpy(var27, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[18] <= -35.0) {
+            memcpy(var27, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        } else {
+            if (input[9] <= 8.5) {
+                if (input[14] <= -66.0) {
+                    memcpy(var27, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                } else {
+                    if (input[0] <= 235.0) {
+                        memcpy(var27, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var27, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                memcpy(var27, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
+        }
     }
     add_vectors(var14, var27, 4, var13);
     double var28[4];
-    if (input[4] <= -34.5) {
-        if (input[12] <= 67.0) {
-            memcpy(var28, (double[]){0.0, 0.8, 0.2, 0.0}, 4 * sizeof(double));
+    if (input[4] <= -20.5) {
+        if (input[12] <= 194.5) {
+            if (input[20] <= 204.0) {
+                memcpy(var28, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            } else {
+                if (input[9] <= 9.5) {
+                    memcpy(var28, (double[]){0.0, 0.3333333333333333, 0.0, 0.6666666666666666}, 4 * sizeof(double));
+                } else {
+                    memcpy(var28, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                }
+            }
         } else {
-            memcpy(var28, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[8] <= 6.5) {
+                memcpy(var28, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var28, (double[]){0.3333333333333333, 0.6666666666666666, 0.0, 0.0}, 4 * sizeof(double));
+            }
         }
     } else {
-        if (input[15] <= -143.5) {
-            if (input[9] <= 17.5) {
-                if (input[4] <= 23.5) {
-                    if (input[18] <= -2.5) {
-                        memcpy(var28, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+        if (input[3] <= 297.5) {
+            if (input[12] <= 113.5) {
+                if (input[7] <= 4.5) {
+                    memcpy(var28, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var28, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                }
+            } else {
+                if (input[19] <= -137.5) {
+                    if (input[7] <= 39.0) {
+                        memcpy(var28, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var28, (double[]){0.058823529411764705, 0.0, 0.0, 0.9411764705882353}, 4 * sizeof(double));
+                        memcpy(var28, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                     }
+                } else {
+                    if (input[8] <= 19.5) {
+                        memcpy(var28, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var28, (double[]){0.17647058823529413, 0.0, 0.0, 0.8235294117647058}, 4 * sizeof(double));
+                    }
+                }
+            }
+        } else {
+            if (input[10] <= 24.0) {
+                if (input[14] <= -16.0) {
+                    memcpy(var28, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
                 } else {
                     memcpy(var28, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                 }
             } else {
-                if (input[12] <= 108.5) {
-                    memcpy(var28, (double[]){0.5, 0.5, 0.0, 0.0}, 4 * sizeof(double));
+                if (input[3] <= 332.5) {
+                    if (input[13] <= 44.0) {
+                        memcpy(var28, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var28, (double[]){0.75, 0.0, 0.0, 0.25}, 4 * sizeof(double));
+                    }
                 } else {
                     memcpy(var28, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                 }
             }
-        } else {
-            memcpy(var28, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
         }
     }
     add_vectors(var13, var28, 4, var12);
     double var29[4];
     if (input[12] <= 113.0) {
-        if (input[1] <= 0.5) {
-            memcpy(var29, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-        } else {
-            if (input[0] <= 186.0) {
-                memcpy(var29, (double[]){0.25, 0.0, 0.75, 0.0}, 4 * sizeof(double));
+        if (input[5] <= 59.5) {
+            if (input[0] <= 374.5) {
+                if (input[11] <= 169.5) {
+                    memcpy(var29, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var29, (double[]){0.0, 0.3333333333333333, 0.6666666666666666, 0.0}, 4 * sizeof(double));
+                }
             } else {
                 memcpy(var29, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
             }
+        } else {
+            if (input[4] <= -38.5) {
+                memcpy(var29, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var29, (double[]){0.0, 0.6666666666666666, 0.3333333333333333, 0.0}, 4 * sizeof(double));
+            }
         }
     } else {
-        if (input[19] <= -55.0) {
-            if (input[3] <= 232.5) {
-                memcpy(var29, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-            } else {
-                memcpy(var29, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-            }
-        } else {
-            if (input[3] <= 310.0) {
-                if (input[2] <= 0.0) {
-                    memcpy(var29, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[20] <= 442.0) {
+            if (input[9] <= 8.5) {
+                if (input[16] <= -83.5) {
+                    if (input[12] <= 190.5) {
+                        memcpy(var29, (double[]){0.8181818181818182, 0.0, 0.0, 0.18181818181818182}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var29, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    }
                 } else {
                     memcpy(var29, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 }
             } else {
-                memcpy(var29, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                if (input[13] <= 33.0) {
+                    memcpy(var29, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
+                } else {
+                    if (input[18] <= 87.5) {
+                        memcpy(var29, (double[]){0.5, 0.5, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var29, (double[]){0.9565217391304348, 0.0, 0.0, 0.043478260869565216}, 4 * sizeof(double));
+                    }
+                }
+            }
+        } else {
+            if (input[4] <= -2.0) {
+                memcpy(var29, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var29, (double[]){0.0, 0.14285714285714285, 0.0, 0.8571428571428571}, 4 * sizeof(double));
             }
         }
     }
     add_vectors(var12, var29, 4, var11);
     double var30[4];
-    if (input[16] <= -43.0) {
-        if (input[3] <= 295.0) {
-            if (input[3] <= 110.0) {
-                memcpy(var30, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-            } else {
-                if (input[12] <= 120.5) {
-                    if (input[17] <= 102.5) {
-                        memcpy(var30, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
+    if (input[11] <= 245.0) {
+        if (input[3] <= 307.5) {
+            if (input[7] <= 4.0) {
+                if (input[12] <= 127.0) {
+                    if (input[13] <= 122.5) {
+                        memcpy(var30, (double[]){0.0, 0.6666666666666666, 0.3333333333333333, 0.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var30, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                        memcpy(var30, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
                     }
                 } else {
                     memcpy(var30, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 }
+            } else {
+                if (input[12] <= 126.0) {
+                    if (input[19] <= 212.5) {
+                        memcpy(var30, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var30, (double[]){0.0, 0.0, 0.6, 0.4}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[14] <= -39.0) {
+                        memcpy(var30, (double[]){0.034482758620689655, 0.034482758620689655, 0.0, 0.9310344827586207}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var30, (double[]){0.45454545454545453, 0.0, 0.0, 0.5454545454545454}, 4 * sizeof(double));
+                    }
+                }
             }
         } else {
-            memcpy(var30, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-        }
-    } else {
-        if (input[13] <= 110.5) {
-            if (input[9] <= 7.0) {
-                if (input[14] <= -37.5) {
-                    memcpy(var30, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            if (input[14] <= -46.5) {
+                if (input[2] <= 0.0) {
+                    memcpy(var30, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                 } else {
-                    memcpy(var30, (double[]){0.0, 0.0, 0.5, 0.5}, 4 * sizeof(double));
+                    memcpy(var30, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 }
             } else {
-                memcpy(var30, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                if (input[9] <= -1.5) {
+                    memcpy(var30, (double[]){0.6666666666666666, 0.0, 0.0, 0.3333333333333333}, 4 * sizeof(double));
+                } else {
+                    memcpy(var30, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                }
             }
-        } else {
-            memcpy(var30, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
         }
+    } else {
+        memcpy(var30, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
     }
     add_vectors(var11, var30, 4, var10);
     double var31[4];
-    if (input[15] <= -141.5) {
-        if (input[15] <= -223.0) {
-            if (input[2] <= 0.0) {
-                memcpy(var31, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
-            } else {
-                if (input[3] <= 247.5) {
+    if (input[13] <= 109.0) {
+        if (input[15] <= -143.0) {
+            if (input[14] <= -43.5) {
+                if (input[9] <= 12.0) {
                     memcpy(var31, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 } else {
-                    memcpy(var31, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                }
-            }
-        } else {
-            if (input[9] <= 13.0) {
-                if (input[12] <= 163.5) {
-                    memcpy(var31, (double[]){0.0, 0.0, 0.3333333333333333, 0.6666666666666666}, 4 * sizeof(double));
-                } else {
-                    memcpy(var31, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                }
-            } else {
-                if (input[3] <= 302.5) {
-                    memcpy(var31, (double[]){0.75, 0.25, 0.0, 0.0}, 4 * sizeof(double));
-                } else {
-                    memcpy(var31, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                }
-            }
-        }
-    } else {
-        memcpy(var31, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-    }
-    add_vectors(var10, var31, 4, var9);
-    double var32[4];
-    if (input[3] <= 295.0) {
-        if (input[13] <= 120.5) {
-            if (input[18] <= 87.5) {
-                memcpy(var32, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-            } else {
-                if (input[17] <= -52.5) {
-                    memcpy(var32, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-                } else {
-                    if (input[4] <= 19.5) {
-                        memcpy(var32, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    if (input[18] <= -15.0) {
+                        memcpy(var31, (double[]){0.0, 0.6666666666666666, 0.3333333333333333, 0.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var32, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
+                        memcpy(var31, (double[]){0.9333333333333333, 0.0, 0.0, 0.06666666666666667}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                if (input[9] <= -4.5) {
+                    memcpy(var31, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                } else {
+                    if (input[3] <= 235.0) {
+                        memcpy(var31, (double[]){0.1, 0.0, 0.3, 0.6}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var31, (double[]){0.9761904761904762, 0.0, 0.0, 0.023809523809523808}, 4 * sizeof(double));
                     }
                 }
             }
         } else {
-            memcpy(var32, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            memcpy(var31, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
         }
     } else {
-        if (input[10] <= 24.0) {
-            memcpy(var32, (double[]){0.75, 0.0, 0.25, 0.0}, 4 * sizeof(double));
+        if (input[7] <= 35.0) {
+            memcpy(var31, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
         } else {
-            memcpy(var32, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[6] <= 6.5) {
+                memcpy(var31, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var31, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
+        }
+    }
+    add_vectors(var10, var31, 4, var9);
+    double var32[4];
+    if (input[3] <= 92.5) {
+        memcpy(var32, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+    } else {
+        if (input[13] <= 110.0) {
+            if (input[4] <= 8.5) {
+                if (input[12] <= 100.5) {
+                    memcpy(var32, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    if (input[19] <= -32.5) {
+                        memcpy(var32, (double[]){0.5714285714285714, 0.21428571428571427, 0.0, 0.21428571428571427}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var32, (double[]){0.08333333333333333, 0.027777777777777776, 0.0, 0.8888888888888888}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                if (input[10] <= 34.0) {
+                    if (input[15] <= -169.0) {
+                        memcpy(var32, (double[]){0.6666666666666666, 0.0, 0.0, 0.3333333333333333}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var32, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[13] <= 85.0) {
+                        memcpy(var32, (double[]){0.9444444444444444, 0.0, 0.0, 0.05555555555555555}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var32, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    }
+                }
+            }
+        } else {
+            if (input[9] <= 2.0) {
+                memcpy(var32, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var32, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         }
     }
     add_vectors(var9, var32, 4, var8);
     double var33[4];
-    if (input[13] <= 110.0) {
+    if (input[13] <= 114.0) {
         if (input[15] <= -143.0) {
-            if (input[17] <= 82.5) {
-                if (input[6] <= 10.5) {
-                    if (input[20] <= 281.5) {
-                        memcpy(var33, (double[]){0.8333333333333334, 0.0, 0.0, 0.16666666666666666}, 4 * sizeof(double));
+            if (input[14] <= -42.5) {
+                if (input[18] <= 122.5) {
+                    if (input[20] <= 277.5) {
+                        memcpy(var33, (double[]){0.0, 0.0, 0.3333333333333333, 0.6666666666666666}, 4 * sizeof(double));
                     } else {
-                        memcpy(var33, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                        memcpy(var33, (double[]){0.875, 0.125, 0.0, 0.0}, 4 * sizeof(double));
                     }
                 } else {
-                    if (input[8] <= -25.0) {
-                        memcpy(var33, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    if (input[9] <= 22.0) {
+                        memcpy(var33, (double[]){0.02702702702702703, 0.0, 0.0, 0.972972972972973}, 4 * sizeof(double));
                     } else {
-                        memcpy(var33, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
+                        memcpy(var33, (double[]){0.7142857142857143, 0.0, 0.0, 0.2857142857142857}, 4 * sizeof(double));
                     }
                 }
             } else {
-                if (input[4] <= 24.0) {
-                    if (input[0] <= 203.5) {
-                        memcpy(var33, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                if (input[4] <= 21.5) {
+                    if (input[16] <= -88.0) {
+                        memcpy(var33, (double[]){0.8095238095238095, 0.0, 0.0, 0.19047619047619047}, 4 * sizeof(double));
                     } else {
-                        memcpy(var33, (double[]){0.25, 0.0, 0.25, 0.5}, 4 * sizeof(double));
+                        memcpy(var33, (double[]){0.23076923076923078, 0.0, 0.15384615384615385, 0.6153846153846154}, 4 * sizeof(double));
                     }
                 } else {
                     memcpy(var33, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
@@ -486,108 +722,164 @@ void classifier_score_L(double * input, double * output) {
             memcpy(var33, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
         }
     } else {
-        memcpy(var33, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[6] <= -10.5) {
+            memcpy(var33, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+        } else {
+            memcpy(var33, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        }
     }
     add_vectors(var8, var33, 4, var7);
     double var34[4];
-    if (input[12] <= 99.5) {
-        if (input[15] <= -200.0) {
-            memcpy(var34, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+    if (input[12] <= 113.0) {
+        if (input[15] <= -166.5) {
+            if (input[8] <= -14.0) {
+                memcpy(var34, (double[]){0.3333333333333333, 0.6666666666666666, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var34, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         } else {
             memcpy(var34, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
         }
     } else {
-        if (input[20] <= 228.5) {
-            if (input[3] <= 282.5) {
-                if (input[20] <= 218.0) {
-                    memcpy(var34, (double[]){0.0, 0.0, 0.2, 0.8}, 4 * sizeof(double));
+        if (input[11] <= 246.0) {
+            if (input[17] <= 80.0) {
+                if (input[15] <= -382.5) {
+                    if (input[17] <= -112.5) {
+                        memcpy(var34, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var34, (double[]){0.09090909090909091, 0.0, 0.0, 0.9090909090909091}, 4 * sizeof(double));
+                    }
                 } else {
-                    memcpy(var34, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    if (input[12] <= 224.5) {
+                        memcpy(var34, (double[]){0.8245614035087719, 0.0, 0.0, 0.17543859649122806}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var34, (double[]){0.1, 0.0, 0.0, 0.9}, 4 * sizeof(double));
+                    }
                 }
             } else {
-                memcpy(var34, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-            }
-        } else {
-            if (input[8] <= -33.0) {
-                memcpy(var34, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-            } else {
-                if (input[17] <= -75.0) {
-                    memcpy(var34, (double[]){0.3333333333333333, 0.6666666666666666, 0.0, 0.0}, 4 * sizeof(double));
+                if (input[16] <= -108.0) {
+                    if (input[17] <= 182.5) {
+                        memcpy(var34, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var34, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
                 } else {
-                    if (input[8] <= 14.5) {
+                    if (input[3] <= 307.5) {
                         memcpy(var34, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var34, (double[]){0.0, 0.0, 0.5, 0.5}, 4 * sizeof(double));
+                        memcpy(var34, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                     }
                 }
             }
+        } else {
+            memcpy(var34, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
         }
     }
     add_vectors(var7, var34, 4, var6);
     double var35[4];
-    if (input[3] <= 295.0) {
-        if (input[4] <= -30.0) {
-            if (input[0] <= 219.5) {
-                memcpy(var35, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
-            } else {
+    if (input[3] <= 310.0) {
+        if (input[4] <= -14.5) {
+            if (input[2] <= 0.0) {
                 memcpy(var35, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                if (input[7] <= 0.0) {
+                    memcpy(var35, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                } else {
+                    if (input[17] <= -107.5) {
+                        memcpy(var35, (double[]){0.0, 0.5, 0.5, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var35, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    }
+                }
             }
         } else {
-            if (input[1] <= 0.5) {
+            if (input[3] <= 115.0) {
                 memcpy(var35, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
             } else {
-                if (input[20] <= 192.5) {
-                    memcpy(var35, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-                } else {
-                    if (input[2] <= 0.0) {
-                        memcpy(var35, (double[]){0.5, 0.5, 0.0, 0.0}, 4 * sizeof(double));
+                if (input[12] <= 122.0) {
+                    if (input[17] <= 90.0) {
+                        memcpy(var35, (double[]){0.0, 0.6666666666666666, 0.3333333333333333, 0.0}, 4 * sizeof(double));
                     } else {
+                        memcpy(var35, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[3] <= 227.5) {
                         memcpy(var35, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var35, (double[]){0.36, 0.04, 0.0, 0.6}, 4 * sizeof(double));
                     }
                 }
             }
         }
     } else {
-        if (input[12] <= 108.5) {
-            memcpy(var35, (double[]){0.5, 0.5, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[14] <= -90.5) {
+            if (input[4] <= -48.5) {
+                memcpy(var35, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var35, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         } else {
-            memcpy(var35, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[17] <= -67.5) {
+                if (input[0] <= 235.0) {
+                    memcpy(var35, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var35, (double[]){0.25, 0.0, 0.0, 0.75}, 4 * sizeof(double));
+                }
+            } else {
+                memcpy(var35, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         }
     }
     add_vectors(var6, var35, 4, var5);
     double var36[4];
     if (input[1] <= 0.5) {
-        if (input[11] <= 159.0) {
-            memcpy(var36, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-        } else {
-            if (input[6] <= 22.0) {
-                memcpy(var36, (double[]){0.0, 0.0, 0.25, 0.75}, 4 * sizeof(double));
-            } else {
+        if (input[11] <= 179.0) {
+            if (input[11] <= 159.5) {
                 memcpy(var36, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var36, (double[]){0.0, 0.0, 0.6666666666666666, 0.3333333333333333}, 4 * sizeof(double));
             }
+        } else {
+            memcpy(var36, (double[]){0.3333333333333333, 0.6666666666666666, 0.0, 0.0}, 4 * sizeof(double));
         }
     } else {
-        if (input[4] <= -15.0) {
-            memcpy(var36, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
-        } else {
-            if (input[9] <= 7.5) {
-                if (input[8] <= 22.5) {
-                    memcpy(var36, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+        if (input[4] <= -13.5) {
+            if (input[8] <= -7.5) {
+                if (input[12] <= 199.0) {
+                    memcpy(var36, (double[]){0.0, 0.5, 0.0, 0.5}, 4 * sizeof(double));
                 } else {
-                    memcpy(var36, (double[]){0.4, 0.0, 0.2, 0.4}, 4 * sizeof(double));
+                    memcpy(var36, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 }
             } else {
-                if (input[5] <= 3.0) {
-                    if (input[7] <= 28.5) {
-                        memcpy(var36, (double[]){0.3333333333333333, 0.0, 0.0, 0.6666666666666666}, 4 * sizeof(double));
-                    } else {
+                if (input[13] <= 99.0) {
+                    memcpy(var36, (double[]){0.5, 0.5, 0.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var36, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                }
+            }
+        } else {
+            if (input[8] <= -35.5) {
+                if (input[12] <= 115.5) {
+                    if (input[14] <= -34.0) {
                         memcpy(var36, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var36, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
                     }
                 } else {
-                    if (input[8] <= -8.5) {
-                        memcpy(var36, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    memcpy(var36, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                }
+            } else {
+                if (input[16] <= -110.5) {
+                    if (input[9] <= -5.5) {
+                        memcpy(var36, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var36, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
+                        memcpy(var36, (double[]){0.9545454545454546, 0.0, 0.0, 0.045454545454545456}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[12] <= 125.5) {
+                        memcpy(var36, (double[]){0.0, 0.25, 0.75, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var36, (double[]){0.2553191489361702, 0.02127659574468085, 0.0, 0.723404255319149}, 4 * sizeof(double));
                     }
                 }
             }
@@ -596,110 +888,170 @@ void classifier_score_L(double * input, double * output) {
     add_vectors(var5, var36, 4, var4);
     double var37[4];
     if (input[13] <= 92.0) {
-        if (input[16] <= -72.0) {
-            if (input[1] <= 0.5) {
-                memcpy(var37, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+        if (input[16] <= -88.5) {
+            if (input[19] <= -12.5) {
+                memcpy(var37, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
             } else {
-                if (input[10] <= 39.5) {
-                    if (input[3] <= 245.0) {
-                        memcpy(var37, (double[]){0.0, 0.0, 0.125, 0.875}, 4 * sizeof(double));
+                if (input[18] <= 127.5) {
+                    if (input[19] <= 90.0) {
+                        memcpy(var37, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                     } else {
                         memcpy(var37, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                     }
                 } else {
-                    if (input[18] <= 120.0) {
-                        memcpy(var37, (double[]){0.5, 0.0, 0.0, 0.5}, 4 * sizeof(double));
-                    } else {
+                    if (input[20] <= 251.0) {
                         memcpy(var37, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var37, (double[]){0.125, 0.0, 0.0, 0.875}, 4 * sizeof(double));
                     }
                 }
             }
         } else {
-            if (input[15] <= -136.0) {
-                if (input[12] <= 133.5) {
-                    if (input[3] <= 227.5) {
-                        memcpy(var37, (double[]){0.0, 0.0, 0.5, 0.5}, 4 * sizeof(double));
+            if (input[15] <= -176.0) {
+                if (input[11] <= 84.5) {
+                    if (input[3] <= 235.0) {
+                        memcpy(var37, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                     } else {
                         memcpy(var37, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                     }
                 } else {
-                    memcpy(var37, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    if (input[5] <= -16.5) {
+                        memcpy(var37, (double[]){0.3333333333333333, 0.0, 0.0, 0.6666666666666666}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var37, (double[]){0.024390243902439025, 0.0, 0.0, 0.975609756097561}, 4 * sizeof(double));
+                    }
                 }
             } else {
-                memcpy(var37, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                if (input[8] <= -19.0) {
+                    if (input[9] <= 28.5) {
+                        memcpy(var37, (double[]){0.0, 0.0, 0.75, 0.25}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var37, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                } else {
+                    memcpy(var37, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+                }
             }
         }
     } else {
-        memcpy(var37, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+        if (input[5] <= 151.0) {
+            if (input[14] <= -59.0) {
+                memcpy(var37, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var37, (double[]){0.0, 0.75, 0.0, 0.25}, 4 * sizeof(double));
+            }
+        } else {
+            memcpy(var37, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+        }
     }
     add_vectors(var4, var37, 4, var3);
     double var38[4];
     if (input[1] <= 0.5) {
-        memcpy(var38, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-    } else {
-        if (input[13] <= 92.0) {
-            if (input[20] <= 235.5) {
-                if (input[3] <= 220.0) {
-                    if (input[2] <= 0.0) {
-                        memcpy(var38, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
-                    } else {
-                        memcpy(var38, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-                    }
+        if (input[12] <= 113.0) {
+            memcpy(var38, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+        } else {
+            if (input[16] <= -114.5) {
+                memcpy(var38, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                if (input[18] <= -7.5) {
+                    memcpy(var38, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
                 } else {
-                    if (input[5] <= -1.0) {
-                        memcpy(var38, (double[]){0.8, 0.0, 0.0, 0.2}, 4 * sizeof(double));
-                    } else {
-                        memcpy(var38, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
-                    }
+                    memcpy(var38, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                }
+            }
+        }
+    } else {
+        if (input[2] <= 0.0) {
+            if (input[5] <= 112.5) {
+                if (input[4] <= -4.5) {
+                    memcpy(var38, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var38, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
                 }
             } else {
-                if (input[4] <= 8.5) {
-                    memcpy(var38, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                if (input[11] <= 137.0) {
+                    memcpy(var38, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                 } else {
-                    if (input[3] <= 247.5) {
-                        memcpy(var38, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    if (input[3] <= 302.5) {
+                        memcpy(var38, (double[]){0.13333333333333333, 0.13333333333333333, 0.0, 0.7333333333333333}, 4 * sizeof(double));
                     } else {
                         memcpy(var38, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                     }
                 }
             }
         } else {
-            memcpy(var38, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            if (input[7] <= 58.5) {
+                if (input[4] <= 14.5) {
+                    if (input[9] <= 18.5) {
+                        memcpy(var38, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var38, (double[]){0.625, 0.0, 0.0, 0.375}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[3] <= 302.5) {
+                        memcpy(var38, (double[]){0.0, 0.16666666666666666, 0.0, 0.8333333333333334}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var38, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                    }
+                }
+            } else {
+                memcpy(var38, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+            }
         }
     }
     add_vectors(var3, var38, 4, var2);
     double var39[4];
-    if (input[13] <= 100.0) {
-        if (input[18] <= 107.5) {
-            if (input[9] <= 2.0) {
-                memcpy(var39, (double[]){0.0, 0.0, 0.5, 0.5}, 4 * sizeof(double));
-            } else {
+    if (input[20] <= 196.0) {
+        if (input[3] <= 292.5) {
+            if (input[17] <= 142.5) {
                 memcpy(var39, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            } else {
+                memcpy(var39, (double[]){0.0, 0.0, 0.4, 0.6}, 4 * sizeof(double));
             }
         } else {
-            if (input[13] <= 26.5) {
-                memcpy(var39, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
-            } else {
-                if (input[12] <= 78.5) {
-                    memcpy(var39, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
+            memcpy(var39, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+        }
+    } else {
+        if (input[13] <= 77.5) {
+            if (input[8] <= -43.5) {
+                if (input[3] <= 367.5) {
+                    memcpy(var39, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
                 } else {
-                    if (input[3] <= 225.0) {
+                    memcpy(var39, (double[]){0.6666666666666666, 0.0, 0.0, 0.3333333333333333}, 4 * sizeof(double));
+                }
+            } else {
+                if (input[3] <= 200.0) {
+                    if (input[8] <= 18.0) {
                         memcpy(var39, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                     } else {
-                        memcpy(var39, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
+                        memcpy(var39, (double[]){0.0, 0.0, 0.8333333333333334, 0.16666666666666666}, 4 * sizeof(double));
+                    }
+                } else {
+                    if (input[8] <= -20.0) {
+                        memcpy(var39, (double[]){0.4117647058823529, 0.0, 0.0, 0.5882352941176471}, 4 * sizeof(double));
+                    } else {
+                        memcpy(var39, (double[]){0.8620689655172414, 0.0, 0.10344827586206898, 0.03448275862068966}, 4 * sizeof(double));
                     }
                 }
             }
+        } else {
+            if (input[4] <= 29.5) {
+                memcpy(var39, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
+            } else {
+                if (input[6] <= -12.5) {
+                    memcpy(var39, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
+                } else {
+                    memcpy(var39, (double[]){0.0, 0.3333333333333333, 0.0, 0.6666666666666666}, 4 * sizeof(double));
+                }
+            }
         }
-    } else {
-        memcpy(var39, (double[]){0.0, 1.0, 0.0, 0.0}, 4 * sizeof(double));
     }
     add_vectors(var2, var39, 4, var1);
     mul_vector_number(var1, 0.05, 4, var0);
     memcpy(output, var0, 4 * sizeof(double));
 }
 
-// R hand: 96/110 correct on unseen files; 13 files, 1 person(s); C 30, H 30, U 31, N 19
+// R hand: 95/110 correct on unseen files; 13 files, 1 person(s); C 30, H 30, U 31, N 19
 // Output order: CHNU (the board picks the first largest, as scikit-learn does).
 const char CLASSIFIER_CLASSES_R[] = "CHNU";
 void classifier_score_R(double * input, double * output) {
@@ -852,7 +1204,7 @@ void classifier_score_R(double * input, double * output) {
                 }
             }
         } else {
-            if (input[16] <= -46.0) {
+            if (input[16] <= -47.5) {
                 if (input[4] <= 14.5) {
                     memcpy(var23, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
                 } else {
@@ -953,7 +1305,7 @@ void classifier_score_R(double * input, double * output) {
                 memcpy(var26, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
             } else {
                 if (input[10] <= 40.5) {
-                    if (input[17] <= 67.5) {
+                    if (input[10] <= 20.0) {
                         memcpy(var26, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
                     } else {
                         memcpy(var26, (double[]){0.0, 0.0, 0.0, 1.0}, 4 * sizeof(double));
@@ -1194,10 +1546,10 @@ void classifier_score_R(double * input, double * output) {
                 }
             }
         } else {
-            if (input[8] <= 24.5) {
+            if (input[16] <= -30.0) {
                 memcpy(var33, (double[]){0.0, 0.0, 1.0, 0.0}, 4 * sizeof(double));
             } else {
-                memcpy(var33, (double[]){0.5, 0.0, 0.5, 0.0}, 4 * sizeof(double));
+                memcpy(var33, (double[]){0.3333333333333333, 0.0, 0.6666666666666666, 0.0}, 4 * sizeof(double));
             }
         }
     } else {
@@ -1249,11 +1601,11 @@ void classifier_score_R(double * input, double * output) {
     add_vectors(var7, var34, 4, var6);
     double var35[4];
     if (input[3] <= 230.0) {
-        if (input[4] <= -20.5) {
+        if (input[4] <= -21.0) {
             memcpy(var35, (double[]){1.0, 0.0, 0.0, 0.0}, 4 * sizeof(double));
         } else {
             if (input[14] <= -35.0) {
-                if (input[8] <= 25.5) {
+                if (input[8] <= 27.5) {
                     if (input[10] <= 78.0) {
                         memcpy(var35, (double[]){0.0, 0.0, 0.9444444444444444, 0.05555555555555555}, 4 * sizeof(double));
                     } else {

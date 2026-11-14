@@ -183,7 +183,7 @@ USB (Serial Monitor at 115200, or any program that opens the port):
 |---|---|---|
 | `DETECT_THRESHOLD_COUNTS` | 96 (3 g) | Trigger when total acceleration rises to this (gravity included). **Starting guess: tune with recordings.** |
 | `PEAK_SEARCH_MS` | 150 | After a trigger, the peak is the largest sample in this time. 100 missed the real snap when a slow wind-up set off the trigger first. |
-| `COOLDOWN_MS` | 400 | No new trigger until this long after the peak. 300 double-counted: a punch's stop/retract burst came up to 250 ms after the peak. |
+| `COOLDOWN_MS` | 350 | No new trigger until this long after the peak. After it, a new punch starts whenever acceleration is above the threshold, not only when it rises past it: in a jab-cross-hook the arm never drops below 3 g between the jab and the hook (hook peak 0.38-0.45 s after the jab), and the old rise-only rule missed 6 of 9 hooks. 300 also triggered on the pull-back about 0.3 s after an uppercut (left hook-uppercut combos: 6 of 7 had an extra punch). |
 | `WINDOW_PRE_MS` / `WINDOW_POST_MS` | 150 / 250 | Samples handed to the features step, around the peak. The punch message goes out about `WINDOW_POST_MS` after the peak. |
 | `MIN_BURST_MS` | 20 | Shorter bursts are knocks (putting the board down), not punches. |
 | `BURST_THRESHOLD_COUNTS`, `GRAVITY_AVG_MS` | 48 (1.5 g), 50 | Feature settings: burst length and the before/after tilt averages. |
