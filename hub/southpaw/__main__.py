@@ -214,7 +214,7 @@ def main() -> None:
     g.add_argument("config", nargs="?", help="boards.toml with the board addresses")
     g.add_argument("--sim", action="store_true", help="fake boards and a fake player instead of BLE")
     g.add_argument("--rounds", type=int, default=3)
-    g.add_argument("--round-secs", type=float, default=60.0)
+    g.add_argument("--round-secs", type=float, default=30.0)
     g.add_argument("--rest-secs", type=float, default=20.0)
     g.add_argument("--summary-secs", type=float, default=10.0)
     g.add_argument("--games", type=int, default=None, help="stop after this many games (default: keep going)")

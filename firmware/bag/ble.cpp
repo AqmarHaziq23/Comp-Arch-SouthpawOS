@@ -73,7 +73,7 @@ static void startAdvertising() {
   static_assert(sizeof(localName) == sizeof(BLE_NAME), "advertised name must match BLE_NAME");
   hci_le_set_scan_resp_data(0, NULL);
   aci_gap_set_discoverable(ADV_IND, (ADV_INTERVAL_MIN_MS * 1000) / 625, (ADV_INTERVAL_MAX_MS * 1000) / 625,
-                           STATIC_RANDOM_ADDR, NO_WHITE_LIST_USE, sizeof(localName), localName, 0, NULL, 0, 0);
+                           PUBLIC_ADDR, NO_WHITE_LIST_USE, sizeof(localName), localName, 0, NULL, 0, 0);
 }
 
 bool ble_begin() {
@@ -92,8 +92,7 @@ bool ble_begin() {
   if (addUartService() != BLE_STATUS_SUCCESS) return false;
   aci_hal_set_tx_power_level(1, 3);       // +4 dBm, as in the example
 
-  uint8_t outLen = 0;
-  aci_hal_read_config_data(CONFIG_DATA_RANDOM_ADDRESS, 6, &outLen, advAddr);
+  memcpy(advAddr, publicAddr, 6);          // we advertise this fixed address (PUBLIC_ADDR)
   started = true;
   needAdvertise = true;
   return true;

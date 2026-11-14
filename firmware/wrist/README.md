@@ -173,7 +173,7 @@ The battery value is the chip's supply voltage, so it stays near 3.2–3.3 V and
 
 USB (Serial Monitor at 115200, or any program that opens the port):
 - `board_ms,x,y,z` raw samples, 200 per second;
-- `# southpaw_wrist name=P1D-WRIST-L hand=L ble=C2:0D:12:83:DF:85 ...` once when the port opens (`ble=` is the address the Pi will see);
+- `# southpaw_wrist name=P1D-WRIST-L hand=L ble=02:80:E1:50:31:4C ...` once when the port opens (`ble=` is the address the Pi will see);
 - `# punch n=3 peak_ms=... peak_g=9 dom=-z burst_ms=220 tilt=45 ... max=... min=... order=... win_peak=... type=H` for each window, then `# ble tx P,L,H,48213,9` (or `# ble not sent (not connected) ...`). A "not a punch" window prints `type=N` and nothing else;
 - `# stats ...` and `# ble ...` every 5 s: sample count (should be 1000), worst sample lateness, punches, knocks ignored, windows called "not a punch" (`not_punch=`), Bluetooth sends and failures.
 
@@ -208,7 +208,7 @@ python training/tools/ble_listen.py --hand L --log ble.jsonl --seconds 60
 Every line the board sends is printed with a timestamp and checked with the hub's own parser (`hub/southpaw/protocol.py`), so `ok` means the Pi would accept it. If the laptop's Bluetooth can't connect, the **nRF Connect** phone app shows the same Nordic UART messages.
 
 Tested on hardware (8–9 Nov):
-- advertises as `P1D-WRIST-L`; the address (`C2:0D:12:83:DF:85` on this board) is the BlueNRG chip's own and **stays the same after a power cycle**, so it can go in the hub's `boards.toml`;
+- advertises as `P1D-WRIST-L`; at the time the address was the chip's random one (`C2:0D:12:83:DF:85`). Since 13 Nov the board advertises the fixed address from `config.h` instead (`02:80:E1:50:31:4C` left, `02:80:E1:50:31:52` right), because the random one can change after a reflash;
 - connects from a Windows laptop (bleak), answers every `T` ping (33–91 ms round trip), and advertises again after a disconnect;
 - stays connected for 10 minutes with sampling at exactly 1000 samples per 5 s, no resyncs, no failed sends.
 
