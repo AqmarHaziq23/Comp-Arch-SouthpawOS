@@ -1,0 +1,42 @@
+# ============================================================
+# vision/.gitignore - Southpaw OS computer vision (Member D)
+# ============================================================
+
+# --- Python environment ---
+# Each machine (Pi, laptop) builds its own venv from requirements.txt.
+# It's hundreds of MB and only works on the machine that made it.
+.venv/
+venv/
+
+# Python's compiled cache files; regenerated automatically
+__pycache__/
+*.pyc
+
+# --- Video recordings ---
+# Too big for GitHub (100 MB per-file limit, and they bloat the repo forever).
+# Keep test clips in a shared Google Drive folder instead.
+recordings/
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# --- Logs and run output ---
+logs/
+*.log
+
+# --- Machine-specific calibration ---
+# The bag-zone corners depend on where the camera stands in each room.
+# Commit config.json with sensible defaults; each setup saves its own local copy.
+calibration.local.json
+
+# --- Secrets ---
+# Never commit tokens or passwords (e.g. the GitHub token used on the Pi)
+.env
+*.token
+
+# --- OS and editor clutter ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
