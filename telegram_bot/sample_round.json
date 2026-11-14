@@ -1,0 +1,17 @@
+{
+  "duration_s": 120,
+  "punches_thrown": 86,
+  "punches_landed": 71,
+  "by_type": {
+    "jab":      {"thrown": 30, "landed": 27},
+    "cross":    {"thrown": 24, "landed": 20},
+    "hook":     {"thrown": 18, "landed": 14},
+    "uppercut": {"thrown": 14, "landed": 10}
+  },
+  "combos_called": 15,
+  "combos_completed": 12,
+  "score": 1310,
+  "heart_rate_avg": 152,
+  "heart_rate_max": 178,
+  "best_combo_streak": 5
+}
