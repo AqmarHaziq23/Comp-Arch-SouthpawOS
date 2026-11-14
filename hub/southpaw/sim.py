@@ -37,6 +37,12 @@ class SimConfig:
     start_delay: float = 1.0  # s after M,WAIT before the simulated player hits the bag 5 times
     hr_delay: float = 2.0  # s from M,REST until the player has a finger on the pulse sensor
     card: str | None = None  # NFC card the simulated player taps before each game (None = guest)
+    # Guard tracking (vision "guard" messages, ~9 a second): hands are up, except the punching
+    # hand during each punch, and now and then a real drop
+    guard: bool = True
+    guard_rate: float = 9.0  # guard messages per second (the Pi's camera rate)
+    guard_drops_per_min: float = 4.0  # how often the simulated boxer drops a hand
+    guard_drop_secs: tuple[float, float] = (0.6, 1.5)  # how long a drop lasts
     seed: int | None = None
 
 
@@ -51,6 +57,12 @@ class Simulator:
         self._tasks: set[asyncio.Task] = set()
         self._rests = 0
         self.connected = asyncio.Event()
+        # Guard: until when each hand is out of guard (punching / dropped). A separate random
+        # generator, so turning guard on/off doesn't change the punches a given seed produces.
+        self._guard_rng = random.Random(None if self.cfg.seed is None else self.cfg.seed + 1)
+        self._punch_until = {"L": 0.0, "R": 0.0}
+        self._drop_until = {"L": 0.0, "R": 0.0}
+        self.guard_drops = 0  # real drops the simulated boxer made (for tests)
 
     def board_ms(self, board: str, t: float | None = None) -> int:
         t = time.monotonic() if t is None else t
@@ -62,6 +74,8 @@ class Simulator:
         if on_connect:
             for b in BOARDS:
                 await on_connect(b)
+        if self.cfg.guard:
+            self._later(0, self._guard_loop())
         await asyncio.Event().wait()  # run until cancelled, like the BLE transport
 
     async def send(self, board: str, line: str) -> None:
@@ -113,6 +127,7 @@ class Simulator:
         for n in numbers:
             hand, code = proto.expected_punch(n, cfg.stance)
             t_punch = time.monotonic()
+            self._punch_until[hand] = t_punch + 0.35  # the punching hand is out of guard until it's back
             wrist = "wristL" if hand == "L" else "wristR"
 
             sent = code
@@ -149,6 +164,22 @@ class Simulator:
                 self._later(0, self._deliver("vision", json.dumps(event), self.rng.uniform(*cfg.vision_latency)))
 
             await asyncio.sleep(self.rng.uniform(*cfg.gap))
+
+    async def _guard_loop(self) -> None:
+        """Pretend to be vision's guard check: one {"kind": "guard"} message per camera frame."""
+        cfg, rng = self.cfg, self._guard_rng
+        frame = 1.0 / cfg.guard_rate
+        while True:
+            now = time.monotonic()
+            for hand in "LR":
+                # Now and then the boxer lets a hand drop for a while (a real drop)
+                if now >= self._drop_until[hand] and rng.random() < cfg.guard_drops_per_min / 60 * frame:
+                    self._drop_until[hand] = now + rng.uniform(*cfg.guard_drop_secs)
+                    self.guard_drops += 1
+            up = {h: now >= self._punch_until[h] and now >= self._drop_until[h] for h in "LR"}
+            msg = {"v": 1, "src": "vision", "kind": "guard", "t": round(now, 3), "L": up["L"], "R": up["R"]}
+            self._later(0, self._deliver("vision", json.dumps(msg), rng.uniform(0.1, 0.15)))
+            await asyncio.sleep(frame)
 
     async def _start_hits(self, n: int = 5) -> None:
         """The player hits the bag 5 times to start a game."""

@@ -14,7 +14,9 @@ the website gets, so the phone and the website always show the same numbers:
   "combos_called": 6, "combos_hit": 4, combos the bag called / combos thrown correctly
   "best_streak": 3,                    most correct combos in a row
   "by_type": {"jab": {"thrown": 5, "landed": 4}, "cross": {...}, ...},
-  "hr_bpm": 142, "hr_good": true       rest heart rate after the round (only if measured)
+  "hr_bpm": 142, "hr_good": true,      rest heart rate after the round (only if measured)
+  "guard_pct": 84,                     % of the round the hands were up in guard (both hands together; punches left out)
+  "guard_pct_lead": 90, "guard_pct_rear": 86, "guard_drops": 2      (only if vision was running)
 }
 
 It is deliberately forgiving:
@@ -30,7 +32,8 @@ import html
 
 # Fields this file lays out itself; everything else goes under "Other stats"
 KNOWN_FIELDS = {"round", "rounds", "duration_s", "score", "thrown", "landed", "combos_called",
-                "combos_hit", "best_streak", "by_type", "hr_bpm", "hr_good"}
+                "combos_hit", "best_streak", "by_type", "hr_bpm", "hr_good",
+                "guard_pct", "guard_pct_lead", "guard_pct_rear", "guard_drops"}
 
 # Order of the rows in the per-punch table ("unknown" = the wrist board couldn't tell)
 PUNCH_ORDER = ["jab", "cross", "hook", "uppercut", "unknown"]
@@ -104,6 +107,17 @@ def format_round(data, first_name=None):
     if "hr_bpm" in data:
         unreliable = data.get("hr_good") is False     # the sensor said the reading was shaky
         lines.append(f"❤️ Rest heart rate: {_num(data['hr_bpm'])} bpm" + (" (rough reading)" if unreliable else ""))
+    if "guard_pct" in data or "guard_drops" in data:
+        # e.g. "🛡️ Guard up: 84% (lead 90% · rear 86%) · 2 drops"
+        parts = []
+        if "guard_pct" in data:
+            hands = [f"{name} {_num(data[key])}%" for name, key in (("lead", "guard_pct_lead"),
+                                                                    ("rear", "guard_pct_rear")) if key in data]
+            parts.append(f"{_num(data['guard_pct'])}%" + (f" ({' · '.join(hands)})" if hands else ""))
+        if "guard_drops" in data:
+            drops = data["guard_drops"]
+            parts.append(f"{_num(drops)} drop{'' if drops == 1 else 's'}")
+        lines.append(f"🛡️ Guard up: {' · '.join(parts)}")
     if "duration_s" in data:
         lines.append(f"⏱ Round time: {_duration(data['duration_s'])}")
 

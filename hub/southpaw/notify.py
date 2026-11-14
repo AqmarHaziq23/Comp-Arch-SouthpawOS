@@ -56,6 +56,8 @@ def round_stats(r, rounds_total: int, round_secs: float) -> dict:
     if r.hr_bpm is not None:  # rest heart rate after this round, only if the sensor got one
         stats["hr_bpm"] = r.hr_bpm
         stats["hr_good"] = r.hr_good
+    if r.guard:  # guard_pct, guard_pct_lead, guard_pct_rear, guard_drops (only if vision was running)
+        stats.update({k: v for k, v in r.guard.items() if v is not None})
     return stats
 
 

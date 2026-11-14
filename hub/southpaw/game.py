@@ -62,6 +62,9 @@ class RoundResult:
     combos: list[ComboResult] = field(default_factory=list)
     hr_bpm: int | None = None
     hr_good: bool = True
+    # Guard stats from vision (guard.py): guard_pct, guard_pct_lead, guard_pct_rear, guard_drops.
+    # None when vision wasn't running.
+    guard: dict | None = None
 
     @property
     def thrown(self) -> int:
@@ -195,7 +198,8 @@ class Game:
         await self.hub.send("bag", proto.mode_msg("ROUND"))
         await self.hub.send("bag", proto.sound_msg("BELL"))
         self.say(f"\n--- Round {n}/{self.cfg.rounds} ---")
-        end = time.monotonic() + self.cfg.round_secs
+        started = time.monotonic()  # guard stats cover the round from here to the final bell
+        end = started + self.cfg.round_secs
         warned = False
         while True:
             left = end - time.monotonic()
@@ -220,8 +224,13 @@ class Game:
             got = " ".join(f"{p.hand}{p.type}{'*' if p.landed else ''}" for p in c.punches) or "-"
             self.say(f"  {'-'.join(map(str, numbers)):<8} ({calls:<12}) thrown {got:<22} +{c.points}")
         await self.hub.send("bag", proto.sound_msg("BELL"))
+        r.guard = self.hub.guard.round_stats(started, time.monotonic(), self.cfg.stance)
         self.say(f"Round {n}: {r.score} points, {r.landed}/{r.thrown} landed, "
                  f"{r.combos_hit}/{len(r.combos)} combos, best streak {r.best_streak}")
+        if r.guard:
+            self.say(f"Guard: {r.guard['guard_pct']}% hands up "
+                     f"(lead {r.guard['guard_pct_lead']}%, rear {r.guard['guard_pct_rear']}%), "
+                     f"{r.guard['guard_drops']} drop{'' if r.guard['guard_drops'] == 1 else 's'}")
         return r
 
     async def _rest(self, r: RoundResult, last: bool) -> None:
