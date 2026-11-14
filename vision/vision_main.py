@@ -80,7 +80,7 @@ def draw_overlay(frame, pose, hands, tracker, checker, stats, min_vis):
     lead = checker.lead
     lines = [f"{stats['fps']:.1f} checks/s | pose {stats['infer_ms']:.0f} ms",
              "person: yes" if pose is not None else "person: NOT FOUND",
-             f"guard (both): {pct(None)}",
+             f"guard (both hands): {pct(None)}",
              f"lead {lead}: {pct(lead)}  rear {'R' if lead == 'L' else 'L'}: {pct('R' if lead == 'L' else 'L')}",
              f"drops: {tracker.hands['L'].drops + tracker.hands['R'].drops}",
              f"hub: sent {stats['sent']}" + (f", {stats['errors']} errors" if stats["errors"] else "")]

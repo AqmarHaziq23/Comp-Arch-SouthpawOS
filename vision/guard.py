@@ -155,8 +155,6 @@ class GuardTracker:
     drop_hold_s: float = 0.4           # a hand must stay down this long to count as a drop
     max_gap_s: float = 0.5             # longest gap between frames that still counts as time
     hands: dict = field(default_factory=lambda: {"L": _HandStats(), "R": _HandStats()})
-    both_up_s: float = 0.0             # time with BOTH hands up
-    both_known_s: float = 0.0          # time we could see both hands
     _last_t: float | None = None
     _last: dict = field(default_factory=dict)
 
@@ -175,9 +173,6 @@ class GuardTracker:
                 if up is not None:
                     self.hands[s].known_s += dt
                     self.hands[s].up_s += dt if up else 0.0
-            if self._last["L"] is not None and self._last["R"] is not None:
-                self.both_known_s += dt
-                self.both_up_s += dt if (self._last["L"] and self._last["R"]) else 0.0
 
         # 2. Drops: a hand that has been down for drop_hold_s, counted once per down stretch
         new_drops = []
@@ -202,9 +197,12 @@ class GuardTracker:
         return self.hands[side].counted
 
     def pct(self, side=None):
-        """Guard % for one hand ("L"/"R"), or for both hands together (None). None if never seen."""
-        up, known = ((self.both_up_s, self.both_known_s) if side is None
-                     else (self.hands[side].up_s, self.hands[side].known_s))
+        """Guard % for one hand ("L"/"R"), or for both hands together (None). None if never seen.
+        Both hands together = all the time each hand was up / all the time each hand could be seen,
+        so it always lies between the two single-hand numbers (same as the hub's hub/southpaw/guard.py)."""
+        sides = "LR" if side is None else side
+        up = sum(self.hands[s].up_s for s in sides)
+        known = sum(self.hands[s].known_s for s in sides)
         return 100.0 * up / known if known > 0 else None
 
     def summary(self, lead="L"):
@@ -215,7 +213,7 @@ class GuardTracker:
             return None if x is None else round(x)
 
         return {
-            "guard_pct": rounded(self.pct()),                 # both hands up
+            "guard_pct": rounded(self.pct()),                 # both hands together
             "guard_drops": self.hands["L"].drops + self.hands["R"].drops,
             "guard_pct_lead": rounded(self.pct(lead)),
             "guard_pct_rear": rounded(self.pct(rear)),

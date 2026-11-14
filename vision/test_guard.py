@@ -119,6 +119,7 @@ def test_tracker_counts_time_and_drops():
     assert t.hands["R"].drops == 1 and t.hands["L"].drops == 0
     assert round(t.pct("L")) == 100
     assert round(t.pct("R")) == 66                   # down 1.0 of the 2.9 s counted (last frame has no time yet)
+    assert round(t.pct()) == 83                      # both hands together: (2.9 + 1.9) / (2.9 + 2.9)
     assert t.summary()["guard_drops"] == 1
 
 
