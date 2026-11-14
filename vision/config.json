@@ -1,0 +1,44 @@
+{
+  "camera": {
+    "_comment": "source: webcam number (0 on the Pi; often 1 for the C922 on a PC with a built-in camera) or a video file. process_fps: pose checks per second (Pi 4 ~9).",
+    "source": "0",
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "process_fps": 9
+  },
+  "pose": {
+    "_comment": "MediaPipe Pose settings. min_visibility: body points less visible than this are ignored.",
+    "model_path": "pose_landmarker_lite.task",
+    "min_detection_confidence": 0.5,
+    "min_presence_confidence": 0.5,
+    "min_tracking_confidence": 0.5,
+    "min_visibility": 0.5
+  },
+  "player": {
+    "_comment": "stance: orthodox (left hand leads) or southpaw (right hand leads).",
+    "stance": "orthodox"
+  },
+  "guard": {
+    "_comment": "Distances in body lengths (shoulders to hips). A fist must be no lower than the mouth + *_max_below_mouth, and no further than max_side_reach sideways from the nose. drop_hold_s: down this long = a drop.",
+    "rear_max_below_mouth": 0.25,
+    "lead_max_below_mouth": 0.25,
+    "max_side_reach": 0.8,
+    "drop_hold_s": 0.4,
+    "scale_smoothing": 0.1,
+    "shoulder_to_body_length": 1.9
+  },
+  "output": {
+    "_comment": "Where the hub listens (UDP). heartbeat_interval_s: status message rate.",
+    "hub_host": "127.0.0.1",
+    "hub_port": 5005,
+    "heartbeat_interval_s": 1.0,
+    "enabled": true
+  },
+  "debug": {
+    "_comment": "show_window needs a desktop. record_path: save the overlay video (null = off).",
+    "show_window": true,
+    "record_path": null,
+    "print_changes": true
+  }
+}
