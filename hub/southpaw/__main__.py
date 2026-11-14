@@ -2,6 +2,7 @@
 
     python -m southpaw play boards.toml    # THE GAME: card tap + 5 bag hits to start, rounds, upload
     python -m southpaw play --sim          # the game with fake boards and a fake player
+    python -m southpaw play --sim --card 04A2B91C   # ...who taps this NFC card (rounds go to the Telegram bot)
     python -m southpaw sim                 # quick demo loop with fake boards
     python -m southpaw scan                # find the TinyCircuits boards
     python -m southpaw ble boards.toml     # demo with the real boards
@@ -72,7 +73,8 @@ async def _play(args: argparse.Namespace) -> None:
     if args.sim:
         from .sim import SimConfig, Simulator
 
-        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, seed=args.seed))
+        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, seed=args.seed,
+                                        card=args.card))
     else:
         from .ble import BleTransport
 
@@ -87,6 +89,11 @@ async def _play(args: argparse.Namespace) -> None:
 
         store = Store(args.db)
     uploader = _make_uploader(args)
+    notifier = None
+    if not args.no_telegram:  # Johanan's Telegram bot: harmless if it isn't running (UDP)
+        from .notify import BotNotifier
+
+        notifier = BotNotifier(port=args.telegram_port)
     cfg = GameConfig(
         rounds=args.rounds,
         round_secs=args.round_secs,
@@ -95,7 +102,7 @@ async def _play(args: argparse.Namespace) -> None:
         stance=args.stance,
         seed=args.seed,
     )
-    game = Game(hub, cfg, store=store, uploader=uploader, source="sim" if args.sim else "ble")
+    game = Game(hub, cfg, store=store, uploader=uploader, notifier=notifier, source="sim" if args.sim else "ble")
 
     synced = asyncio.Event()
     boards = ("wristL", "wristR", "bag") if args.sim else tuple(transport.addresses)
@@ -120,6 +127,8 @@ async def _play(args: argparse.Namespace) -> None:
             t.close()
         if store:
             store.close()
+        if notifier:
+            notifier.close()
         hub.close()
 
 
@@ -229,6 +238,9 @@ def main() -> None:
     g.add_argument("--token", default=os.environ.get("INGEST_TOKEN"), help="the website's INGEST_TOKEN")
     g.add_argument("--listen-host", default="127.0.0.1",
                    help="0.0.0.0 to accept vision/NFC messages from other machines")
+    g.add_argument("--card", help="with --sim: the simulated player taps this NFC card UID (default: guest)")
+    g.add_argument("--telegram-port", type=int, default=5007, help="UDP port of the Telegram bot on this Pi")
+    g.add_argument("--no-telegram", action="store_true", help="don't send rounds to the Telegram bot")
 
     lb = sub.add_parser("leaderboard", help="best score per player")
     lb.add_argument("--limit", type=int, default=10)

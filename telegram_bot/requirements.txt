@@ -1,0 +1,2 @@
+# Telegram Bot API library (async). Pure Python: works on Windows, macOS and the Pi.
+python-telegram-bot==22.8

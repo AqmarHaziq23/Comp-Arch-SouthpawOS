@@ -1,0 +1,12 @@
+# Secrets: the bot token lives here, never commit it
+.env
+
+# Local database (players' Telegram chat ids and round history - personal data, stays on the device)
+*.db
+*.db-journal
+
+# Python environment and cache files
+.venv/
+venv/
+__pycache__/
+*.pyc
