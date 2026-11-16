@@ -107,7 +107,12 @@ async def run_tests():
                      "Best streak: 3", "Rest heart rate: 142 bpm", "Round time: 0:30", "Uppercut"):
         assert expected in full, expected
     assert "rough reading" in format_round({"hr_bpm": 130, "hr_good": False})
-    assert "Guard pct: 82" in format_round({"guard_pct": 82})
+    assert "Total jabs: 7" in format_round({"total_jabs": 7})
+
+    # Guard stats from vision get their own line; a single drop isn't "1 drops"
+    assert "Guard up: 84% (lead 90% · rear 86%) · 2 drops" in full
+    assert "Guard up: 100% · 1 drop" in format_round({"guard_pct": 100, "guard_drops": 1})
+    assert "Guard" not in format_round({"score": 5})       # no vision: no guard line
 
 
 if __name__ == "__main__":
