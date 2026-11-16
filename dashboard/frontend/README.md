@@ -35,11 +35,38 @@ Every request needs the shared token from `.env`: `Authorization: Bearer <INGEST
       "score": 120, "thrown": 18, "landed": 14,
       "combos_called": 6, "combos_hit": 2, "best_streak": 3,     optional
       "hr": {"bpm": 132, "good": true},                          optional. Rest reading after this round
-      "started_at": 1794379269.0                                 optional. Session start, unix seconds
+      "duration_s": 30, "unmatched_impacts": 1,                  optional. Round length; bag hits with no punch
+      "started_at": 1794379269.0,                                optional. Session start, unix seconds
+      "combos": [ ... ]                                          optional. The detail behind the totals, below
     }
+
+`combos` is what the round dashboard is drawn from. It is the round as the hub saw it through the board messages in
+`protocol/PROTOCOL.md`, one entry per combo the hub called:
+
+    {"called": [1, 2, 3],            the combo sent to the bag            C,1-2-3
+     "hit": true,                    the sound played after it            S,HIT / S,MISS
+     "correct": 3, "points": 55,     how the hub scored it
+     "punches": [                    what the wrists reported, in order
+       {"hand": "L", "type": "J",    hand and punch type                  P,L,J,48213,11
+        "peak_g": 11,                wrist peak acceleration
+        "t": 1.42,                   seconds since the round started (the hub turns board time into this)
+        "landed": true,              a bag impact matched the punch
+        "impact": 72}]}              that impact's strength, 0-100        I,48260,72
+
+| Protocol message | Where it shows on the round dashboard |
+|---|---|
+| `P` punch (hand, type, peak g, time) | "Punches by type", the punch timeline, each punch in the combo table, average and hardest punch |
+| `I` bag impact (time, strength) | Landed or missed for every punch, average bag impact, "bag hits with no punch" |
+| `H` heart rate (BPM, good or not) | Rest heart rate for the round |
+| `C` combo | The "Called" column of the combo table |
+| `S` sound `HIT` / `MISS` | The "Result" column of the combo table, combos completed |
+| `M` mode `ROUND` / `REST` | One upload per round, taken after its rest; round length |
+| `T` clock ping, `R` raw samples | Not uploaded. `T` is how the hub lines up board times before it sends `t`; `R` is training only |
 
 - Answers `{"ok": true, "session_ids": [12]}`, or `400` with `{"error": "..."}` saying what is wrong.
 - A list of rounds in one request is accepted too.
+- `thrown`, `landed`, `combos_called` and `combos_hit` are counted from `combos` when left out.
+- A round sent without `combos` is still saved; its page then shows the totals only.
 - Sending the same `session` + `round` again **replaces** it, so the Pi can retry after a failed upload without
   double counting. The Pi should keep rounds it could not send and retry them.
 - The card decides whose round it is: it is matched to the athlete account that has that card ID. Rounds for a card
@@ -80,10 +107,11 @@ Demo logins for `--sim` (password `demo1234` for all):
 | URL | What |
 |---|---|
 | `/login`, `/signup` | Coach or athlete login; sign-up creates a gym (coach) or joins one with its code (athlete) |
-| `/live` (`?big=1`) | Latest round for the gym, big-screen style: athlete, round score, thrown/landed, accuracy, combos, rest heart rate, session total |
+| `/live` (`?big=1`) | The round dashboard for the gym's most recent round; reloads itself when a newer round arrives |
 | `/` | The gym's athletes: high score, accuracy, sessions |
 | `/player/<player id>` | An athlete's page: high score, best streak, accuracy trend, score, rest heart rate over time, history, card |
 | `/sessions`, `/session/<id>` | The gym's history and per-session rounds + heart-rate chart |
+| `/session/<id>/round/<n>` | Round dashboard: totals, punch power, punches by type, every punch on a timeline, each combo called and what was thrown |
 
 A player ID is the athlete's username in upper case (`kai` -> `/player/KAI`).
 
@@ -92,9 +120,9 @@ A player ID is the athlete's username in upper case (`kai` -> `/player/KAI`).
 | File | What it does |
 |---|---|
 | `app.py` | Routes, login, the Pi's upload endpoint |
-| `db.py` | Tables (gyms, users, sessions, rounds) and the database connection |
+| `db.py` | Tables (gyms, users, sessions, rounds, combos, punches) and the database connection |
 | `accounts.py` | Sign-up, login, gyms, card linking |
-| `store.py` | Saving uploaded rounds, and every query the pages use (always limited to one gym) |
+| `store.py` | Saving uploaded rounds with their combos and punches, and every query the pages use (always limited to one gym) |
 | `sim.py` | Fake Pi for `--sim` |
 | `Dockerfile`, `docker-compose.yml`, `.env.example` | The Docker setup |
 
@@ -102,8 +130,8 @@ A player ID is the athlete's username in upper case (`kai` -> `/player/KAI`).
 
 1. **The Pi uploads through `/api/round`, not straight into Postgres.** The database port is not opened to the network;
    the website checks the token and the data, then writes it. C needs to call `../backend/pi_uploader.py` from the hub.
-2. **Round payload.** The fields above are a proposal. `score`, `thrown` and `landed` per round are what the pages need;
-   the hub's per-punch detail is not uploaded.
+2. **Round payload.** The hub now sends every combo and punch of the round (`combos`). The camera's guard tracking is
+   not uploaded or shown yet.
 3. **Heart-rate recovery metric.** One rest BPM per round, no peak to measure a drop from. The dashboard plots rest BPM.
 4. **No in-round view.** The big screen shows a round only after it ends. The called combo, timer and punch-by-punch
    feed are gone from the website; during a round the bag board's own screen is the display.

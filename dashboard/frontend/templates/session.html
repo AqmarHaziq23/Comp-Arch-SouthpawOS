@@ -12,9 +12,10 @@
 <div class="grid cols-2">
   <div class="panel"><h3>Rounds</h3>
     <table><thead><tr><th>Round</th><th class="num">Score</th><th class="num">Thrown</th><th class="num">Landed</th><th class="num">Accuracy</th><th class="num">Combos</th></tr></thead>
-    <tbody>{% for r in d.rounds %}<tr><td>{{ r.round_no }}</td><td class="num">{{ r.score }}</td><td class="num">{{ r.thrown }}</td>
+    <tbody>{% for r in d.rounds %}<tr class="link"><td><a href="{{ url_for('round_page', sid=s.id, round_no=r.round_no) }}">Round {{ r.round_no }}</a></td><td class="num">{{ r.score }}</td><td class="num">{{ r.thrown }}</td>
       <td class="num">{{ r.landed }}</td><td class="num">{{ r.accuracy }}%</td>
       <td class="num">{% if r.combos_called is not none and r.combos_hit is not none %}{{ r.combos_hit }}/{{ r.combos_called }}{% else %}-{% endif %}</td></tr>{% endfor %}</tbody></table>
+    <p class="note">Open a round for its combos and every punch.</p>
   </div>
   <div class="panel"><h3>Heart-rate recovery between rounds</h3>
     {% if d.hr %}<div class="chartbox"><canvas id="hr"></canvas></div>

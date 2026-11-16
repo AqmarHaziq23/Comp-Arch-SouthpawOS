@@ -1,63 +1,30 @@
 {% extends "base.html" %}
 {% block title %}Latest round - SouthpawOS{% endblock %}
 {% block bodyclass %}{{ 'big' if big }}{% endblock %}
-{% block body %}
-<section class="live">
+{% block content %}
 {% if r %}
-  <div class="bar"><span>LATEST ROUND · ROUND {{ r.round_no }}</span><span class="timer">{{ r.received_at|when }}</span></div>
-  <div class="who">
-    <div><div class="lbl">Athlete</div><div class="name">{{ r.nickname }}</div></div>
-    <div style="text-align:right"><div class="lbl">Round score</div><div class="score">{{ r.score }}</div></div>
-  </div>
-
-  <div class="livegrid">
-    <div>
-      <div class="stats">
-        <div class="stat"><b>{{ r.thrown }}</b><span>Thrown</span></div>
-        <div class="stat"><b>{{ r.landed }}</b><span>Landed</span></div>
-        <div class="stat"><b>{{ r.accuracy }}%</b><span>Accuracy</span></div>
-        {% if r.combos_called is not none and r.combos_hit is not none %}
-        <div class="stat"><b>{{ r.combos_hit }}/{{ r.combos_called }}</b><span>Combos completed</span></div>
-        {% endif %}
-        {% if r.best_streak is not none %}<div class="stat"><b>{{ r.best_streak }}</b><span>Best combo streak</span></div>{% endif %}
-      </div>
-      <div class="hrbox" style="margin-top:1.5rem">
-        <div class="lbl">Heart rate in the rest after this round</div>
-        {% if r.hr_bpm is none %}
-        <div class="bpm">--</div><div class="lbl">No reading was taken.</div>
-        {% else %}
-        <div class="bpm">{{ r.hr_bpm }} <span style="font-size:1.5rem">BPM</span></div>
-        <div class="lbl">{{ 'Good reading.' if r.hr_good else 'Unreliable reading. It is not counted in the charts.' }}</div>
-        {% endif %}
-      </div>
-    </div>
-    <div>
-      <div class="lbl">This session so far</div>
-      <div class="stats" style="margin:.25rem 0 1rem">
-        <div class="stat"><b>{{ r.session.score }}</b><span>Total score</span></div>
-        <div class="stat"><b>{{ r.session.rounds }}</b><span>Round{{ '' if r.session.rounds == 1 else 's' }} uploaded</span></div>
-        <div class="stat"><b>{{ r.session.accuracy }}%</b><span>Session accuracy</span></div>
-      </div>
-      <p><a class="btn" style="background:var(--orange);color:var(--ink)" href="{{ url_for('session_page', sid=r.session_id) }}">Open session</a></p>
-      {% if board %}
-      <div class="lbl" style="margin-top:1.5rem">{{ g.user.gym }} · top scores</div>
-      <ol class="top5">{% for b in board %}<li><span>{{ loop.index }}. {{ b.nickname }}</span><b>{{ b.best_score }}</b></li>{% endfor %}</ol>
-      {% endif %}
-    </div>
-  </div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem">
+  <h2>Latest round <span class="muted" style="font-weight:400">· {{ r.nickname }} · round {{ r.round_no }}</span></h2>
+  <p style="margin:0" class="muted">Uploaded {{ r.received_at|when }} · session so far: <b style="color:var(--ink)">{{ r.session.score }}</b> points over {{ r.session.rounds }} round{{ '' if r.session.rounds == 1 else 's' }}
+    · <a href="{{ url_for('session_page', sid=r.session_id) }}">open session</a></p>
+</div>
+{% include "_round.html" %}
 {% else %}
-  <div class="idle">
-    <div class="big">No rounds yet</div>
-    <p class="lbl">Tap your card on the reader at the Pi and play a round. It shows up here when the round ends.</p>
-    {% if board %}
-    <ol>{% for b in board %}<li><span>{{ loop.index }}. {{ b.nickname }}</span><b>{{ b.best_score }}</b></li>{% endfor %}</ol>
-    {% endif %}
-  </div>
+<div class="panel empty">
+  <h2>No rounds yet</h2>
+  <p>Tap your card on the reader at the Pi and play a round. It shows up here when the round ends.</p>
+</div>
 {% endif %}
-</section>
+{% if board %}
+<h3 style="margin-top:1.5rem">{{ g.user.gym }} · top scores</h3>
+<div class="panel"><table>
+  <tbody>{% for b in board %}<tr><td>{{ loop.index }}. {{ b.nickname }}</td><td class="num"><b>{{ b.best_score }}</b></td></tr>{% endfor %}</tbody>
+</table></div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{% include "_round_scripts.html" %}
 <script>
 /* Reload when the Pi uploads a newer round for this gym. */
 var shown = {{ {'id': r.id, 'received_at': r.received_at}|tojson if r else 'null' }};

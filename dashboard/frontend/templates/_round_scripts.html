@@ -1,0 +1,11 @@
+{# Draws the two charts of _round.html. Needs `r`. #}
+{% if r and r.has_detail %}
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script>
+var ROUND = {{ {'by_type': r.by_type, 'punches': r.punches, 'duration_s': r.duration_s}|tojson }};
+loadLib("{{ url_for('static', filename='vendor/chart.umd.min.js') }}",
+        "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js").then(function () {
+  if (chartsReady(['byType', 'timeline'])) roundCharts(ROUND);
+});
+</script>
+{% endif %}

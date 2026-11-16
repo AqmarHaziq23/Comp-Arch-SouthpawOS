@@ -1,0 +1,83 @@
+{# One round's dashboard. Needs `r` from store.round_detail() / store.latest_round().
+   Used by round.html and live.html; the charts are drawn by round_charts() in static/charts.js. #}
+<div class="panel stats" style="margin-bottom:1rem">
+  <div class="stat"><b>{{ r.score }}</b><span>Round score</span></div>
+  <div class="stat"><b>{{ r.thrown }}</b><span>Punches thrown</span></div>
+  <div class="stat"><b>{{ r.landed }}</b><span>Landed on the bag</span></div>
+  <div class="stat"><b>{{ r.accuracy }}%</b><span>Accuracy</span></div>
+  {% if r.avg_g is not none %}<div class="stat"><b>{{ r.avg_g }} g</b><span>Average g this round</span></div>{% endif %}
+  {% if r.combos_called is not none and r.combos_hit is not none %}
+  <div class="stat"><b>{{ r.combos_hit }}/{{ r.combos_called }}</b><span>Combos completed</span></div>
+  {% endif %}
+  {% if r.best_streak is not none %}<div class="stat"><b>{{ r.best_streak }}</b><span>Best combo streak</span></div>{% endif %}
+</div>
+
+{% if r.has_detail %}
+<div class="panel stats" style="margin-bottom:1rem">
+  {% if r.max_g is not none %}<div class="stat"><b>{{ r.max_g }} g</b><span>Hardest punch (peak g)</span></div>{% endif %}
+  {% if r.avg_impact is not none %}<div class="stat"><b>{{ r.avg_impact }}</b><span>Average bag impact (0-100)</span></div>{% endif %}
+  {% if r.per_min is not none %}<div class="stat"><b>{{ r.per_min }}</b><span>Punches per minute</span></div>{% endif %}
+  {% if r.unmatched_impacts is not none %}<div class="stat"><b>{{ r.unmatched_impacts }}</b><span>Bag hits with no punch</span></div>{% endif %}
+  <div class="stat">
+    {% if r.hr_bpm is none %}<b>--</b><span>Rest heart rate: no reading</span>
+    {% else %}<b>{{ r.hr_bpm }}</b><span>Rest heart rate (BPM){{ '' if r.hr_good else ', unreliable' }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="grid cols-2" style="margin-bottom:1rem">
+  <div class="panel">
+    <h3>Punches by type</h3>
+    <div class="chartbox"><canvas id="byType" role="img" aria-label="Landed and missed punches for each punch type. The same numbers are in the table below."></canvas></div>
+    <table class="compact">
+      <thead><tr><th>Type</th><th class="num">Thrown</th><th class="num">Landed</th><th class="num">Accuracy</th><th class="num">Avg g</th><th class="num">Avg impact</th></tr></thead>
+      <tbody>
+      {% for t in r.by_type %}
+      <tr><td>{{ t.name }}</td><td class="num">{{ t.thrown }}</td><td class="num">{{ t.landed }}</td><td class="num">{{ t.accuracy }}%</td>
+        <td class="num">{{ t.avg_g if t.avg_g is not none else '-' }}</td><td class="num">{{ t.avg_impact if t.avg_impact is not none else '-' }}</td></tr>
+      {% endfor %}
+      {% for h in r.by_hand %}
+      <tr class="sub"><td>{{ h.name }} hand</td><td class="num">{{ h.thrown }}</td><td class="num">{{ h.landed }}</td><td class="num">{{ h.accuracy }}%</td>
+        <td class="num">{{ h.avg_g if h.avg_g is not none else '-' }}</td><td class="num">{{ h.avg_impact if h.avg_impact is not none else '-' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h3>Every punch through the round</h3>
+    <div class="chartbox"><canvas id="timeline" role="img" aria-label="Each punch plotted by when it was thrown and how hard, marked landed or missed. The same punches are listed in the combo table."></canvas></div>
+    <p class="note">Height is the wrist's peak acceleration in g. Circles landed on the bag; triangles missed. Hover a mark for the punch.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Combos called</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>#</th><th>Called</th><th>Thrown</th><th class="num">Correct</th><th class="num">Landed</th><th>Result</th><th class="num">Points</th></tr></thead>
+    <tbody>
+    {% for c in r.combos %}
+    <tr>
+      <td>{{ c.seq }}</td>
+      <td><span class="mono">{{ c.called }}</span><br><span class="muted">{{ c.names|join(' · ') }}</span></td>
+      <td>{% for x in c.punches %}<span class="punch {{ 'landed' if x.landed else 'missed' }}" title="{{ x.hand_name }} {{ x.name|lower }}{% if x.peak_g is not none %}, {{ x.peak_g }} g{% endif %}, {{ 'landed' if x.landed else 'missed' }}{% if x.impact is not none %}, bag impact {{ x.impact }}/100{% endif %}">{{ x.hand }} {{ x.name }}{% if x.peak_g is not none %} <small>{{ x.peak_g }} g</small>{% endif %} <small>{{ 'landed' if x.landed else 'missed' }}</small></span>{% else %}<span class="muted">nothing thrown</span>{% endfor %}</td>
+      <td class="num">{% if c.correct is not none %}{{ c.correct }}/{{ c.numbers|length }}{% else %}-{% endif %}</td>
+      <td class="num">{{ c.landed }}/{{ c.punches|length }}</td>
+      <td><span class="tag {{ 'ok' if c.hit else 'no' }}">{{ 'HIT' if c.hit else 'MISS' }}</span></td>
+      <td class="num">{{ c.points if c.points is not none else '-' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Called = the combo the hub sent to the bag. A punch is "landed" when the bag felt an impact at the same moment as the wrist's punch.
+    HIT means every called punch was thrown with the right hand and type.</p>
+</div>
+{% else %}
+<div class="panel">
+  <div class="stat">
+    {% if r.hr_bpm is none %}<b>--</b><span>Rest heart rate: no reading</span>
+    {% else %}<b>{{ r.hr_bpm }}</b><span>Rest heart rate (BPM){{ '' if r.hr_good else ', unreliable' }}</span>{% endif %}
+  </div>
+  <p class="note">Only the totals were uploaded for this round, so there is no punch-by-punch detail to show.</p>
+</div>
+{% endif %}

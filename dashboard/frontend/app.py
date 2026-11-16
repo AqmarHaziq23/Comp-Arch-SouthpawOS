@@ -3,7 +3,7 @@
 Run:   python app.py --sim        # fake Pi + demo data and logins, local SQLite file
        docker compose up --build  # the real thing: this app + a Postgres database
 Pages: /login, /signup, /live (latest round, big screen), / (gym leaderboard),
-       /player/<player id>, /sessions, /session/<id>
+       /player/<player id>, /sessions, /session/<id>, /session/<id>/round/<n>
 Every page needs a login (coach or athlete) and only shows the athletes of
 the signed-in user's gym.
 Pi -> dashboard: POST /api/round, one finished round + the NFC card ID (needs the INGEST_TOKEN).
@@ -174,6 +174,15 @@ def session_page(sid):
     return render_template("session.html", d=d, rec=store.hr_recovery(d["hr"]))
 
 
+@app.get("/session/<int:sid>/round/<int:round_no>")
+def round_page(sid, round_no):
+    """One round's dashboard: the combos called, every punch, impacts and heart rate."""
+    r = store.round_detail(sid, round_no, g.user["gym_id"])
+    if not r:
+        abort(404)
+    return render_template("round.html", r=r)
+
+
 @app.get("/player/<pid>")
 def player_page(pid):
     athlete = accounts.athlete(g.user["gym_id"], pid)
@@ -202,7 +211,7 @@ if __name__ == "__main__":
         import sim
         start(os.environ.get("DATABASE_URL") or "sqlite:///" + (db.HERE / "demo.db").as_posix())
         accounts.seed_demo()
-        store.seed_demo(accounts.all_cards())
+        sim.seed(store.ingest_round, accounts.all_cards(), db.rows("SELECT 1 FROM sessions LIMIT 1"))
         print(f"Demo logins (password {accounts.DEMO_PASSWORD}):")
         for gym_name, code, coach, people in accounts.DEMO:
             print(f"  {gym_name} [code {code}]  coach: {coach}   athletes: {', '.join(p[0] for p in people)}")

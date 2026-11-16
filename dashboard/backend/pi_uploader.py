@@ -61,14 +61,27 @@ class Uploader:
 
     # ---------- rounds ----------
     def send_round(self, round_no, score, thrown, landed, combos_called=None, combos_hit=None,
-                   best_streak=None, hr_bpm=None, hr_good=True):
+                   best_streak=None, hr_bpm=None, hr_good=True, combos=None, duration_s=None,
+                   unmatched_impacts=None):
         """Upload one finished round. Returns True if the website has it now,
-        False if it was kept on the Pi to be sent later."""
+        False if it was kept on the Pi to be sent later.
+
+        `combos` is the detail behind the totals, one entry per combo the hub called:
+
+            {"called": [1, 2, 3], "hit": True, "correct": 3, "points": 55,
+             "punches": [{"hand": "L", "type": "J", "peak_g": 11, "t": 1.42,
+                          "landed": True, "impact": 72}, ...]}
+
+        `t` is seconds since the round started; `impact` is the bag's strength (0-100)
+        for a landed punch. The website's round dashboard is drawn from this."""
         if self.session is None:
             self.start_session()
         data = {"session": self.session, "round": round_no, "card": self.card_uid,
                 "score": score, "thrown": thrown, "landed": landed,
-                "combos_called": combos_called, "combos_hit": combos_hit, "best_streak": best_streak}
+                "combos_called": combos_called, "combos_hit": combos_hit, "best_streak": best_streak,
+                "duration_s": duration_s, "unmatched_impacts": unmatched_impacts}
+        if combos is not None:
+            data["combos"] = combos
         if hr_bpm is not None:
             data["hr"] = {"bpm": hr_bpm, "good": bool(hr_good)}
         self._keep(data)                   # written to disk first, so a crash cannot lose it
@@ -138,11 +151,28 @@ def main():
 
     if not args.flush:
         print(f"session {up.start_session(args.card)} as {up.card_uid or 'guest'} -> {up.server}")
+        expected = {1: ("L", "J"), 2: ("R", "C"), 3: ("L", "H"), 4: ("R", "H"), 5: ("L", "U"), 6: ("R", "U")}
         for n in range(1, args.rounds + 1):
-            thrown = random.randint(12, 24)
-            landed = random.randint(thrown // 2, thrown)
-            sent = up.send_round(n, score=landed * 10, thrown=thrown, landed=landed,
-                                 hr_bpm=random.randint(125, 155), hr_good=True)
+            combos, t = [], 1.0
+            for _ in range(6):                      # six made-up combos, thrown as called
+                called = [random.randint(1, 6) for _ in range(random.randint(2, 4))]
+                punches = []
+                for number in called:
+                    hand, kind = expected[number]
+                    landed = random.random() < 0.7
+                    g = random.randint(8, 18)
+                    punches.append({"hand": hand, "type": kind, "peak_g": g, "t": round(t, 2), "landed": landed,
+                                    "impact": g * 4 if landed else None})
+                    t += 0.5
+                hits = sum(p["landed"] for p in punches)
+                combos.append({"called": called, "hit": True, "correct": len(called),
+                               "points": len(called) * 10 + hits * 5 + 10, "punches": punches})
+                t += 1.5
+            thrown = sum(len(c["punches"]) for c in combos)
+            landed = sum(p["landed"] for c in combos for p in c["punches"])
+            sent = up.send_round(n, score=sum(c["points"] for c in combos), thrown=thrown, landed=landed,
+                                 combos_called=len(combos), combos_hit=len(combos), best_streak=len(combos),
+                                 hr_bpm=random.randint(125, 155), hr_good=True, combos=combos, duration_s=30)
             print(f"  round {n}: thrown {thrown}, landed {landed} -> {'uploaded' if sent else 'kept on the Pi'}")
         up.end_session()
     left = up.flush()

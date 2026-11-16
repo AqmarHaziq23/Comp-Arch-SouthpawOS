@@ -18,6 +18,16 @@ One file, [pi_uploader.py](pi_uploader.py). It uses only the Python standard lib
     up.send_round(2, score=90, thrown=15, landed=10)
     up.end_session()
 
+To get the round dashboard on the website (punches by type, the punch timeline, each combo), also pass the detail:
+
+    up.send_round(1, score=120, thrown=18, landed=14, duration_s=30, unmatched_impacts=1,
+                  combos=[{"called": [1, 2, 3], "hit": True, "correct": 3, "points": 55,
+                           "punches": [{"hand": "L", "type": "J", "peak_g": 11, "t": 1.42,
+                                        "landed": True, "impact": 72}]}])
+
+`t` is seconds since the round started and `impact` is the bag's strength for a landed punch. The hub's game
+(`hub/southpaw/game.py`) already sends all of this.
+
 - `<server>` is the address of the machine running `docker compose up` in `../frontend`.
 - `<INGEST_TOKEN>` is the value in that machine's `.env`. Keep it out of git.
 - The card ID is what links a round to a player: the website matches it to the athlete account with that card.
@@ -44,7 +54,3 @@ feed to send.
 This sends a made-up 3-round session for that card (leave out `--card` for a guest) and says whether each round
 arrived. With the website's `--sim` mode, `04A2B91C` is the demo athlete Kai.
 
-## Still to do (Member C)
-
-Call `start_session`, `send_round` and `end_session` from the hub's game loop. The hub already knows the tapped
-card (`Hub.player_uid`) and the per-round punches; it needs to count thrown and landed and add up the round's score.

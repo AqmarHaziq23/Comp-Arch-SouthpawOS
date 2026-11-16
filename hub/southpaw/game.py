@@ -62,6 +62,8 @@ class RoundResult:
     combos: list[ComboResult] = field(default_factory=list)
     hr_bpm: int | None = None
     hr_good: bool = True
+    started: float = 0.0           # hub clock when the round began (punch times are measured from it)
+    unmatched_impacts: int = 0     # bag hits with no wrist punch behind them
 
     @property
     def thrown(self) -> int:
@@ -100,6 +102,31 @@ def score_combo(numbers: list[int], punches: list[FusedPunch], stance: str) -> C
     hit = correct == len(expected)
     points = correct * 10 + landed * 5 + (10 if hit else 0)
     return ComboResult(numbers, punches, correct, landed, hit, points)
+
+
+def round_detail(r: RoundResult) -> list[dict]:
+    """Every combo of a round with its punches, for the website's round dashboard
+    (the `combos` argument of dashboard/backend/pi_uploader.Uploader.send_round)."""
+    return [
+        {
+            "called": c.numbers,
+            "hit": c.hit,
+            "correct": c.correct,
+            "points": c.points,
+            "punches": [
+                {
+                    "hand": p.hand,
+                    "type": p.type,
+                    "peak_g": p.peak_g,
+                    "t": round(p.t - r.started, 2),  # seconds since the round started
+                    "landed": p.landed,
+                    "impact": p.impact_strength,
+                }
+                for p in c.punches
+            ],
+        }
+        for c in r.combos
+    ]
 
 
 class Game:
@@ -191,7 +218,8 @@ class Game:
 
     async def _play_round(self, n: int) -> RoundResult:
         self.state = "round"
-        r = RoundResult(n)
+        r = RoundResult(n, started=time.monotonic())
+        unmatched_before = self.hub.fuser.unmatched_impacts
         await self.hub.send("bag", proto.mode_msg("ROUND"))
         await self.hub.send("bag", proto.sound_msg("BELL"))
         self.say(f"\n--- Round {n}/{self.cfg.rounds} ---")
@@ -220,6 +248,7 @@ class Game:
             got = " ".join(f"{p.hand}{p.type}{'*' if p.landed else ''}" for p in c.punches) or "-"
             self.say(f"  {'-'.join(map(str, numbers)):<8} ({calls:<12}) thrown {got:<22} +{c.points}")
         await self.hub.send("bag", proto.sound_msg("BELL"))
+        r.unmatched_impacts = self.hub.fuser.unmatched_impacts - unmatched_before
         self.say(f"Round {n}: {r.score} points, {r.landed}/{r.thrown} landed, "
                  f"{r.combos_hit}/{len(r.combos)} combos, best streak {r.best_streak}")
         return r
@@ -250,6 +279,9 @@ class Game:
             best_streak=r.best_streak,
             hr_bpm=r.hr_bpm,
             hr_good=r.hr_good,
+            combos=round_detail(r),
+            duration_s=self.cfg.round_secs,
+            unmatched_impacts=r.unmatched_impacts,
         )
         self.say(f"Round {r.number} {'uploaded to the website' if ok else 'kept on the Pi (website not reachable)'}")
 

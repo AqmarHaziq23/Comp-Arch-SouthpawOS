@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from sqlalchemy import (Column, Float, ForeignKey, Integer, MetaData, String, Table,
-                        UniqueConstraint, create_engine, text)
+                        UniqueConstraint, create_engine, inspect, text)
 from sqlalchemy.exc import OperationalError
 
 HERE = Path(__file__).resolve().parent
@@ -49,7 +49,31 @@ Table("rounds", meta,
       Column("hr_bpm", Integer),                                    # reading taken in the rest after this round
       Column("hr_good", Integer),                                   # 1 good, 0 unreliable
       Column("received_at", Float(53), nullable=False),
+      Column("duration_s", Float(53)),                              # how long the round lasted
+      Column("unmatched_impacts", Integer),                         # bag hits (I) with no wrist punch (P)
       UniqueConstraint("session_id", "round_no"))
+# The detail behind a round, straight from the protocol messages the Pi saw:
+# each combo it called (C), whether it was a HIT or MISS (S), and each punch (P)
+# with the bag impact (I) that backed it, if any.
+Table("combos", meta,
+      Column("id", Integer, primary_key=True),
+      Column("round_id", Integer, ForeignKey("rounds.id"), nullable=False, index=True),
+      Column("seq", Integer, nullable=False),                       # 1st, 2nd, 3rd combo of the round
+      Column("called", String(32), nullable=False),                 # as sent to the bag, e.g. "1-2-3"
+      Column("correct", Integer),                                   # punches that matched the call
+      Column("hit", Integer, nullable=False),                       # 1 = S,HIT  0 = S,MISS
+      Column("points", Integer))
+Table("punches", meta,
+      Column("id", Integer, primary_key=True),
+      Column("round_id", Integer, ForeignKey("rounds.id"), nullable=False, index=True),
+      Column("combo_seq", Integer, nullable=False),                 # which combo it was thrown in
+      Column("seq", Integer, nullable=False),                       # order within the round
+      Column("t", Float(53)),                                       # seconds since the round started
+      Column("hand", String(1), nullable=False),                    # L | R
+      Column("type", String(1), nullable=False),                    # J C H U X
+      Column("peak_g", Integer),                                    # wrist acceleration at the peak
+      Column("landed", Integer, nullable=False),                    # 1 = a bag impact backed it
+      Column("impact", Integer))                                    # that impact's strength, 0-100
 Table("meta", meta,
       Column("key", String(32), primary_key=True),
       Column("value", String(255), nullable=False))
@@ -65,11 +89,25 @@ def init(url=None, wait=30):
     while True:
         try:
             meta.create_all(engine)
+            _add_missing_columns()
             return
         except OperationalError:
             if time.time() > deadline:
                 raise
             time.sleep(1)
+
+
+def _add_missing_columns():
+    """create_all() only makes new tables. A database from an older version also
+    needs the columns added since, which are all optional."""
+    existing = inspect(engine)
+    with engine.begin() as con:
+        for table in meta.sorted_tables:
+            have = {c["name"] for c in existing.get_columns(table.name)}
+            for col in table.columns:
+                if col.name not in have:
+                    kind = col.type.compile(dialect=engine.dialect)
+                    con.execute(text(f"ALTER TABLE {table.name} ADD COLUMN {col.name} {kind}"))
 
 
 def q(con, sql, **params):

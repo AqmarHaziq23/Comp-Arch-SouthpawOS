@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Round {{ r.round_no }} - {{ r.nickname }} - SouthpawOS{% endblock %}
+{% block content %}
+<h2>{{ r.nickname }} <span class="muted" style="font-weight:400">· round {{ r.round_no }} · {{ r.session.started_at|when }}</span></h2>
+{% include "_round.html" %}
+<p style="margin-top:1rem"><a href="{{ url_for('session_page', sid=r.session_id) }}">Back to the session</a></p>
+{% endblock %}
+{% block scripts %}{% include "_round_scripts.html" %}{% endblock %}
