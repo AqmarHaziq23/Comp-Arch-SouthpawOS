@@ -1,0 +1,4 @@
+# Only needed on the Pi with the real reader (python nfc_reader.py).
+# --fake mode and test_nfc.py need nothing extra.
+# Pulls in adafruit-blinka (the Pi's board/busio pins) automatically.
+adafruit-circuitpython-pn532

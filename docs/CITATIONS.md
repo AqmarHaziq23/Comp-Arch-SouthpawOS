@@ -25,3 +25,5 @@ tutorial, and put a credit comment at the top of the file that uses it.
 | `telegram_bot/` (dependency) | python-telegram-bot 22.8 (`Application`, long polling) | LGPL-3.0 | https://github.com/python-telegram-bot/python-telegram-bot | Johanan |
 | `vision/` (dependency + model) | MediaPipe Pose Landmarker 0.10.18 and `pose_landmarker_lite.task` (BlazePose GHUM 3D); V. Bazarevsky et al., "BlazePose: On-device Real-time Body Pose tracking", 2020 | Apache-2.0 | https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker | Johanan |
 | `vision/` (dependency) | OpenCV (`opencv-contrib-python`, installed with MediaPipe) | Apache-2.0 | https://opencv.org | Johanan |
+| `nfc/nfc_reader.py` | Adafruit example `pn532_simpletest.py` (connecting over I²C, `SAM_configuration`, `read_passive_target`), Tony DiCola / ladyada for Adafruit | MIT | https://github.com/adafruit/Adafruit_CircuitPython_PN532 | Johanan |
+| `nfc/` (dependency) | Adafruit CircuitPython PN532 library + Adafruit Blinka (CircuitPython `board`/`busio` on the Pi) | MIT | https://github.com/adafruit/Adafruit_CircuitPython_PN532, https://github.com/adafruit/Adafruit_Blinka | Johanan |
