@@ -47,6 +47,12 @@ constexpr uint16_t WINDOW_POST_MS = 250;           // ... and ends this long aft
 constexpr uint16_t BURST_THRESHOLD_COUNTS = 48;    // 1.5 g: burst = the run above this around the peak
 constexpr uint16_t GRAVITY_AVG_MS = 50;            // tilt = average of the first / last 50 ms of the window
 constexpr uint16_t MIN_BURST_MS = 20;              // shorter bursts are knocks (e.g. putting the board down), not punches
+constexpr uint16_t HIT_SEARCH_PRE_MS = 75;         // the punch time sent to the Pi is the hardest sample from this long before
+                                                   // the detector's peak to the end of the window. On hooks, uppercuts and slow
+                                                   // crosses the detector's peak is the swing; the snap comes about 130 ms later
+                                                   // (up to 175; 14 Nov recordings). Before the peak: in a double jab the second
+                                                   // snap came 15-50 ms before its peak (3 of 193 combo punches); 75 leaves margin.
+                                                   // Must stay under COOLDOWN_MS - WINDOW_POST_MS, so two punches never share a sample.
 
 // ---- Derived values (segment_punches.py computes these the same way) --------
 constexpr uint32_t SAMPLE_PERIOD_US = 1000000UL / SAMPLE_RATE_HZ;
@@ -57,6 +63,7 @@ constexpr uint16_t WINDOW_PRE_SAMPLES = WINDOW_PRE_MS / SAMPLE_PERIOD_MS;
 constexpr uint16_t WINDOW_POST_SAMPLES = WINDOW_POST_MS / SAMPLE_PERIOD_MS;
 constexpr uint16_t WINDOW_LEN = WINDOW_PRE_SAMPLES + 1 + WINDOW_POST_SAMPLES;  // peak sits at index WINDOW_PRE_SAMPLES
 constexpr uint16_t GRAVITY_AVG_SAMPLES = GRAVITY_AVG_MS / SAMPLE_PERIOD_MS;
+constexpr uint16_t HIT_SEARCH_PRE_SAMPLES = HIT_SEARCH_PRE_MS / SAMPLE_PERIOD_MS;
 constexpr uint32_t DETECT_THRESHOLD_SQ = (uint32_t)DETECT_THRESHOLD_COUNTS * DETECT_THRESHOLD_COUNTS;
 constexpr uint32_t BURST_THRESHOLD_SQ = (uint32_t)BURST_THRESHOLD_COUNTS * BURST_THRESHOLD_COUNTS;
 
@@ -69,6 +76,8 @@ static_assert(WINDOW_POST_MS > PEAK_SEARCH_MS, "the peak must be found before th
 static_assert(COOLDOWN_MS > WINDOW_POST_MS, "one punch at a time: its window must finish before the cooldown ends");
 static_assert(BURST_THRESHOLD_COUNTS <= DETECT_THRESHOLD_COUNTS, "the peak must be inside the burst");
 static_assert(GRAVITY_AVG_SAMPLES >= 1 && 2 * GRAVITY_AVG_SAMPLES <= WINDOW_LEN, "gravity averages must fit in the window");
+static_assert(HIT_SEARCH_PRE_MS <= WINDOW_PRE_MS, "the hit search must start inside the window");
+static_assert(COOLDOWN_MS - HIT_SEARCH_PRE_MS > WINDOW_POST_MS, "two punches must never report the same sample as their hit");
 static_assert((RING_SIZE & (RING_SIZE - 1)) == 0, "RING_SIZE must be a power of two");
 static_assert(RING_SIZE > WINDOW_LEN, "the ring must hold a whole punch window");
 

@@ -30,13 +30,14 @@ RAW_DIR = ROOT / "training" / "data" / "raw"
 FEATURES_CSV = ROOT / "training" / "data" / "features.csv"
 
 NEEDED = ["SAMPLE_RATE_HZ", "COUNTS_PER_G", "DETECT_THRESHOLD_COUNTS", "PEAK_SEARCH_MS", "COOLDOWN_MS",
-          "WINDOW_PRE_MS", "WINDOW_POST_MS", "BURST_THRESHOLD_COUNTS", "GRAVITY_AVG_MS", "MIN_BURST_MS"]
+          "WINDOW_PRE_MS", "WINDOW_POST_MS", "BURST_THRESHOLD_COUNTS", "GRAVITY_AVG_MS", "MIN_BURST_MS",
+          "HIT_SEARCH_PRE_MS"]
 NAME_RE = re.compile(r"^(?P<person>[^_]+)_(?P<hand>[LR])_(?P<label>[^_]+)_(?P<stamp>.+)$")
 AXES = "xyz"
 FEATURE_COLUMNS = ["file", "person", "hand", "label", "punch", "row", "peak_ms", "peak_counts", "peak_g",
                    "dom_axis", "dom_sign", "burst_ms", "pre_x", "pre_y", "pre_z", "post_x", "post_y", "post_z",
                    "tilt_change", "max_x", "max_y", "max_z", "min_x", "min_y", "min_z",
-                   "order_x", "order_y", "order_z", "win_peak_counts"]
+                   "order_x", "order_y", "order_z", "win_peak_counts", "hit_ms", "hit_counts", "hit_g"]
 
 
 # ---------------------------------------------------------------- constants from config.h
@@ -64,6 +65,7 @@ def load_config(path, overrides):
     c["WINDOW_POST_SAMPLES"] = c["WINDOW_POST_MS"] // period
     c["WINDOW_LEN"] = c["WINDOW_PRE_SAMPLES"] + 1 + c["WINDOW_POST_SAMPLES"]
     c["GRAVITY_AVG_SAMPLES"] = c["GRAVITY_AVG_MS"] // period
+    c["HIT_SEARCH_PRE_SAMPLES"] = c["HIT_SEARCH_PRE_MS"] // period
     c["DETECT_THRESHOLD_SQ"] = c["DETECT_THRESHOLD_COUNTS"] ** 2
     c["BURST_THRESHOLD_SQ"] = c["BURST_THRESHOLD_COUNTS"] ** 2
 
@@ -76,6 +78,9 @@ def load_config(path, overrides):
         (c["BURST_THRESHOLD_COUNTS"] <= c["DETECT_THRESHOLD_COUNTS"], "the peak must be inside the burst"),
         (c["GRAVITY_AVG_SAMPLES"] >= 1 and 2 * c["GRAVITY_AVG_SAMPLES"] <= c["WINDOW_LEN"],
          "gravity averages must fit in the window"),
+        (c["HIT_SEARCH_PRE_MS"] <= c["WINDOW_PRE_MS"], "the hit search must start inside the window"),
+        (c["COOLDOWN_MS"] - c["HIT_SEARCH_PRE_MS"] > c["WINDOW_POST_MS"],
+         "two punches must never report the same sample as their hit"),
     ]
     for ok, why in checks:
         if not ok:
@@ -153,6 +158,16 @@ def features(w, c):
         whole["max_" + a], whole["min_" + a] = hi, lo
         whole["order_" + a] = (vals.index(lo) - vals.index(hi)) * c["SAMPLE_PERIOD_MS"]
     whole["win_peak_counts"] = math.isqrt(max(mag2(s) for s in w))
+
+    # The hit (what the punch message reports): the hardest sample from just before the detector's
+    # peak to the end of the window. Strictly greater: the first one wins a tie.
+    hit = pre - c["HIT_SEARCH_PRE_SAMPLES"]
+    for k in range(hit + 1, len(w)):
+        if mag2(w[k]) > mag2(w[hit]):
+            hit = k
+    hit_counts = math.isqrt(mag2(w[hit]))
+    whole["hit_ms"], whole["hit_counts"] = w[hit][0], hit_counts
+    whole["hit_g"] = (hit_counts + c["COUNTS_PER_G"] // 2) // c["COUNTS_PER_G"]
     return {
         "peak_ms": p[0], "peak_counts": peak_counts,
         "peak_g": (peak_counts + c["COUNTS_PER_G"] // 2) // c["COUNTS_PER_G"],
@@ -251,7 +266,8 @@ def plot(path, samples, punches, c, out):
             ax.plot(t, [s[i + 1] / cpg for s in w], color=COLORS[a], linewidth=1.2, label=a)
         ax.axhline(thr_g, color=NEUTRAL, linewidth=0.8, linestyle="--")
         ax.axvline(0, color=INK_2, linewidth=0.6, linestyle=":")
-        ax.set_title(f"#{k + 1}  {f['peak_g']} g  {f['dom_sign'] > 0 and '+' or '-'}{f['dom_axis']}  "
+        ax.axvline(f["hit_ms"] - f["peak_ms"], color=INK, linewidth=0.8)     # the time the board sends
+        ax.set_title(f"#{k + 1}  {f['hit_g']} g  {f['dom_sign'] > 0 and '+' or '-'}{f['dom_axis']}  "
                      f"burst {f['burst_ms']} ms  tilt {f['tilt_change']}", fontsize=7.5, color=INK, loc="left")
     for k, ax in enumerate(axes.flat):                # x labels on the lowest visible panel of each column
         if k < n and k + cols >= n:
@@ -263,7 +279,7 @@ def plot(path, samples, punches, c, out):
     if handles:
         fig.legend(handles, labels, loc="upper right", ncol=4, frameon=False, fontsize=8, labelcolor=INK_2)
     fig.suptitle(f"{pathlib.Path(path).name}: {n} punch{'es' if n != 1 else ''}  "
-                 f"(dashed = {thr_g:g} g trigger)", x=0.01, ha="left", fontsize=10, color=INK)
+                 f"(dashed = {thr_g:g} g trigger, solid line = the hit: time and g sent)", x=0.01, ha="left", fontsize=10, color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(out, dpi=110, facecolor=SURFACE)
     plt.close(fig)

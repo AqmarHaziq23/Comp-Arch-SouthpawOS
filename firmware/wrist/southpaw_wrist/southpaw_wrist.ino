@@ -92,7 +92,7 @@ static char* putXYZ(char* p, int16_t x, int16_t y, int16_t z) {
 // Built in one buffer and sent with one write(), for the same reason as printSample().
 static void printPunch(const PunchFeatures& f, PunchType t) {
   static const char AXES[3] = {'x', 'y', 'z'};
-  char line[256];
+  char line[320];
   char* p = line;
   p = putStr(p, "# punch n=");      p = putInt(p, (int32_t)punchCount);
   p = putStr(p, " peak_ms=");       p = putInt(p, (int32_t)f.peakMs);
@@ -107,6 +107,8 @@ static void printPunch(const PunchFeatures& f, PunchType t) {
   p = putStr(p, " min=");           p = putXYZ(p, f.minX, f.minY, f.minZ);
   p = putStr(p, " order=");         p = putXYZ(p, f.orderX, f.orderY, f.orderZ);
   p = putStr(p, " win_peak=");      p = putInt(p, f.winPeakMag);
+  p = putStr(p, " hit_ms=");        p = putInt(p, (int32_t)f.hitMs);
+  p = putStr(p, " hit_g=");         p = putInt(p, f.hitG);
   p = putStr(p, " type=");          *p++ = punch_code(t);
   *p++ = '\r';
   *p++ = '\n';
@@ -142,16 +144,17 @@ static void handlePunch(const DetectorEvent& ev) {
     return;
   }
   punchCount++;
-  display_set_punch(t, punchCount, f.peakG);
+  display_set_punch(t, punchCount, f.hitG);
 
   // Protocol punch message: P,<hand>,<type>,<board_ms>,<peak_g>\n (protocol/PROTOCOL.md).
-  // board_ms is the time of the peak sample.
+  // board_ms and peak_g are the hit: the hardest sample of the window, the moment closest to contact.
+  // (Not the detector's peak: on hooks and uppercuts that is the swing, about 130 ms before the snap.)
   char msg[BLE_MAX_MSG + 8];
   char* p = msg;
   *p++ = 'P'; *p++ = ','; *p++ = HAND; *p++ = ','; *p++ = punch_code(t); *p++ = ',';
-  p = putInt(p, (int32_t)f.peakMs);
+  p = putInt(p, (int32_t)f.hitMs);
   *p++ = ',';
-  p = putInt(p, f.peakG);
+  p = putInt(p, f.hitG);
   *p++ = '\n';
   uint8_t len = (uint8_t)(p - msg);
   bool queued = len <= BLE_MAX_MSG && ble_queue_line(msg, len);

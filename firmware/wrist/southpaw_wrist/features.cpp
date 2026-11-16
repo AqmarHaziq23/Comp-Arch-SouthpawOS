@@ -89,4 +89,16 @@ void features_compute(const Sample* w, PunchFeatures& f) {
   f.orderY = (int16_t)(((int16_t)imn[1] - (int16_t)imx[1]) * (int16_t)SAMPLE_PERIOD_MS);
   f.orderZ = (int16_t)(((int16_t)imn[2] - (int16_t)imx[2]) * (int16_t)SAMPLE_PERIOD_MS);
   f.winPeakMag = (uint16_t)isqrt32(maxMag2);
+
+  // The hit: the hardest sample from just before the detector's peak to the end of the window
+  // (strictly greater: the first one wins a tie).
+  uint16_t hit = WINDOW_PRE_SAMPLES - HIT_SEARCH_PRE_SAMPLES;
+  uint32_t hitMag2 = mag2_of(w[hit]);
+  for (uint16_t i = hit + 1; i < WINDOW_LEN; i++) {
+    uint32_t m2 = mag2_of(w[i]);
+    if (m2 > hitMag2) { hitMag2 = m2; hit = i; }
+  }
+  f.hitMs = w[hit].ms;
+  f.hitMag = (uint16_t)isqrt32(hitMag2);
+  f.hitG = (uint8_t)((f.hitMag + COUNTS_PER_G / 2) / COUNTS_PER_G);
 }

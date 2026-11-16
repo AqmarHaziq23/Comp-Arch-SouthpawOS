@@ -102,8 +102,8 @@ python training/tools/segment_punches.py --set DETECT_THRESHOLD_COUNTS=128   # t
 
 It runs **the same detector and features as the board** (constants read from `southpaw_wrist/config.h`, integer maths identical to `detector.cpp` / `features.cpp`), then:
 - prints punches found per file. If you threw 10 jabs and it finds 7 or 13, tune the threshold or cooldown before trusting the data;
-- writes `training/data/features.csv`, one row per punch, with the label, hand and person taken from the file name. Besides the values at the peak (`peak_*`, `dom_*`, `burst_ms`, tilt), it has **whole-window** values that don't depend on which sample the detector called the peak: each axis's `max_*` and `min_*`, `order_*` (ms from the max to the min, > 0 = max first) and `win_peak_counts`;
-- saves `<file>_punches.png` next to each CSV, one panel per punch, so you can check the cuts by eye (PNGs are gitignored).
+- writes `training/data/features.csv`, one row per punch, with the label, hand and person taken from the file name. Besides the values at the peak (`peak_*`, `dom_*`, `burst_ms`, tilt), it has **whole-window** values that don't depend on which sample the detector called the peak: each axis's `max_*` and `min_*`, `order_*` (ms from the max to the min, > 0 = max first) and `win_peak_counts`. `hit_ms` and `hit_g` are the time and strength the board sends to the Pi (see "What the punch message reports" below);
+- saves `<file>_punches.png` next to each CSV, one panel per punch, so you can check the cuts by eye (PNGs are gitignored). The dotted line is the detector's peak; the solid line is the hit, the moment the board reports.
 
 ### Train and test the classifier
 
@@ -175,7 +175,7 @@ The battery value is the chip's supply voltage, so it stays near 3.2–3.3 V and
 USB (Serial Monitor at 115200, or any program that opens the port):
 - `board_ms,x,y,z` raw samples, 200 per second;
 - `# southpaw_wrist name=P1D-WRIST-L hand=L ble=02:80:E1:50:31:4C ...` once when the port opens (`ble=` is the address the Pi will see);
-- `# punch n=3 peak_ms=... peak_g=9 dom=-z burst_ms=220 tilt=45 ... max=... min=... order=... win_peak=... type=H` for each window, then `# ble tx P,L,H,48213,9` (or `# ble not sent (not connected) ...`). A "not a punch" window prints `type=N` and nothing else;
+- `# punch n=3 peak_ms=... peak_g=5 dom=-z burst_ms=220 tilt=45 ... max=... min=... order=... win_peak=... hit_ms=48213 hit_g=9 type=H` for each window, then `# ble tx P,L,H,48213,9` (or `# ble not sent (not connected) ...`). The message carries `hit_ms` and `hit_g`, not `peak_ms` and `peak_g`. A "not a punch" window prints `type=N` and nothing else;
 - `# stats ...` and `# ble ...` every 5 s: sample count (should be 1000), worst sample lateness, punches, knocks ignored, windows called "not a punch" (`not_punch=`), Bluetooth sends and failures.
 
 ### Settings in `config.h`
@@ -187,9 +187,22 @@ USB (Serial Monitor at 115200, or any program that opens the port):
 | `COOLDOWN_MS` | 350 | No new trigger until this long after the peak. After it, a new punch starts whenever acceleration is above the threshold, not only when it rises past it: in a jab-cross-hook the arm never drops below 3 g between the jab and the hook (hook peak 0.38-0.45 s after the jab), and the old rise-only rule missed 6 of 9 hooks. 300 also triggered on the pull-back about 0.3 s after an uppercut (left hook-uppercut combos: 6 of 7 had an extra punch). |
 | `WINDOW_PRE_MS` / `WINDOW_POST_MS` | 150 / 250 | Samples handed to the features step, around the peak. The punch message goes out about `WINDOW_POST_MS` after the peak. |
 | `MIN_BURST_MS` | 20 | Shorter bursts are knocks (putting the board down), not punches. |
+| `HIT_SEARCH_PRE_MS` | 75 | The punch message reports the hardest sample from this long before the detector's peak to the end of the window. Must stay under `COOLDOWN_MS` − `WINDOW_POST_MS` (100), so two punches can never report the same sample. |
 | `BURST_THRESHOLD_COUNTS`, `GRAVITY_AVG_MS` | 48 (1.5 g), 50 | Feature settings: burst length and the before/after tilt averages. |
 
 `segment_punches.py` reads these, so keep each as `constexpr <type> NAME = <integer>;` on one line.
+
+### What the punch message reports
+
+`P,<hand>,<type>,<board_ms>,<peak_g>` carries **the hit**: the time and strength of the hardest sample in the punch window, which is the moment closest to contact. It is not the detector's peak.
+
+- **Why:** the detector takes the largest sample in the 150 ms after the 3 g trigger. On hooks and uppercuts the slow swing sets off the trigger, and the snap comes after that search has ended. In the 14 Nov recordings the hardest sample came a median of 130 ms after the detector's peak on left hooks and left uppercuts (26 and 27 of 30 were more than 100 ms later), 115 ms on right uppercuts (20 of 31), and more than 100 ms later on 5 of 30 crosses with a slow wind-up. The hub counts a punch as landed if a bag impact is within 150 ms of `board_ms`, so the old time left hooks and uppercuts at the edge of that window. Jabs don't move (0 of 30).
+- **Strength too:** the old `peak_g` was the swing's (median 5 g for a left hook, and 3-5 g for a slow cross that really peaked at 11-16 g). The hit's is the real one.
+- **The window, the features and the model don't change.** The window is still cut around the detector's peak, so the classifier sees exactly what it was trained on, and re-exporting gives the same `classifier_model.c`.
+- **Timing for the hub:** the message still goes out `WINDOW_POST_MS` after the detector's peak, so for most punches it now arrives about 80-310 ms after `board_ms` (it was 250-310 ms). In the rare double-jab case below it can be up to about 385 ms, still inside the hub's 400 ms allowance (`WRIST_LATENCY`).
+- In a double jab the second snap can come just before the detector's peak (15-50 ms before, in 3 of 193 combo punches), which is why the search starts `HIT_SEARCH_PRE_MS` before the peak.
+- **On the boards (16 Nov):** 15 punches per hand, captured over USB while punching. Every field of every `# punch` line and every message matched `segment_punches.py` (15 of 15 on each board, 0 timing gaps). The 5 left hooks moved 145-180 ms later and the 5 right hooks 95-135 ms. The left board sent its 15 messages over Bluetooth and the hub's parser accepted all of them; the right board's radio was not connected in this run.
+- Measured on shadowboxing recordings, not yet on the bag. Check it there: with the hub running, `impact_dt` in the session log's `fused` lines should be small for hooks and uppercuts as well as for jabs.
 
 ### How it stays on time
 

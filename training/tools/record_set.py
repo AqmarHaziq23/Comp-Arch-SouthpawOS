@@ -121,7 +121,7 @@ def plan(hand, only):
 def summarise(path, label, c):
     """How many punches the board would have detected in the file."""
     _, punches, info = sp.process(path, c)
-    peaks = " ".join(str(p["peak_g"]) for p in punches)
+    peaks = " ".join(str(p["hit_g"]) for p in punches)      # the g the board would send
     found = len(punches)
     if label in WHAT_TO_DO and label not in NOT_PUNCH:
         note = "  <- fewer than expected, redo? (r)" if found < 6 else ""

@@ -11,9 +11,9 @@
 #include "sampler.h"
 
 struct PunchFeatures {
-  uint32_t peakMs;      // board time of the peak sample (used as the punch time)
+  uint32_t peakMs;      // board time of the detector's peak sample (the window is cut around it)
   uint16_t peakMag;     // total acceleration at the peak, counts (32 = 1 g)
-  uint8_t peakG;        // peakMag rounded to whole g (the punch message's peak field)
+  uint8_t peakG;        // peakMag rounded to whole g
   uint8_t domAxis;      // 0 = x, 1 = y, 2 = z: the axis with the largest |value| at the peak
   int8_t domSign;       // +1 or -1: the sign of that axis at the peak
   uint16_t burstMs;     // how long the total stayed >= BURST_THRESHOLD around the peak
@@ -27,6 +27,14 @@ struct PunchFeatures {
   int16_t minX, minY, minZ;     // smallest value of each axis in the window, counts
   int16_t orderX, orderY, orderZ;  // ms from that axis's max to its min: > 0 = max came first
   uint16_t winPeakMag;          // largest total acceleration in the window, counts
+
+  // The hit: the hardest sample from HIT_SEARCH_PRE_MS before the detector's peak to the end of the
+  // window (the first one wins a tie). This is what the punch message reports, because it is the
+  // moment closest to contact: on hooks, uppercuts and slow crosses the detector's peak is the swing.
+  // Not a model input.
+  uint32_t hitMs;       // board time of that sample (the punch message's time)
+  uint16_t hitMag;      // its total acceleration, counts
+  uint8_t hitG;         // hitMag rounded to whole g (the punch message's peak field)
 };
 
 uint32_t isqrt32(uint32_t v);                 // floor(sqrt(v))
