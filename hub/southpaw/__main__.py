@@ -73,8 +73,8 @@ async def _play(args: argparse.Namespace) -> None:
     if args.sim:
         from .sim import SimConfig, Simulator
 
-        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, seed=args.seed,
-                                        card=args.card))
+        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, guard=not args.no_vision,
+                                        seed=args.seed, card=args.card))
     else:
         from .ble import BleTransport
 
@@ -145,7 +145,8 @@ async def _main(args: argparse.Namespace) -> None:
     if args.cmd == "sim":
         from .sim import SimConfig, Simulator
 
-        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, seed=args.seed))
+        transport = Simulator(SimConfig(stance=args.stance, vision=not args.no_vision, guard=not args.no_vision,
+                                        seed=args.seed))
     else:
         from .ble import BleTransport
 

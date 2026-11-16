@@ -15,5 +15,9 @@
     "uppercut": {"thrown": 3, "landed": 2}
   },
   "hr_bpm": 142,
-  "hr_good": true
+  "hr_good": true,
+  "guard_pct": 84,
+  "guard_pct_lead": 90,
+  "guard_pct_rear": 86,
+  "guard_drops": 2
 }

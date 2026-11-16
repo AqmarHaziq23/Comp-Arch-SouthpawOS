@@ -19,6 +19,7 @@ from typing import Callable
 from . import protocol as proto
 from .clock import ClockSync
 from .fusion import FusedPunch, Fuser, ImpactEvent, PunchEvent, VisionEvent
+from .guard import GuardLog
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class Hub:
         # Called with (pi_time, strength) for every bag hit; the game uses it for the 5-hit start.
         self.on_impact: Callable[[float, int], None] | None = None
         self.vision_status_at: float | None = None  # last vision heartbeat, Pi time
+        self.guard = GuardLog()  # vision's hands-up readings + wrist punches -> guard stats per round
         self._clock_replies: dict[str, asyncio.Event] = {}
         self._log = None
         if log_dir is not None:
@@ -77,6 +79,7 @@ class Hub:
         elif isinstance(msg, proto.Punch):
             t = clock.to_pi_time(msg.board_ms, fallback=t_recv)
             self.fuser.add_punch(PunchEvent(t, msg.hand, msg.type, msg.peak_g))
+            self.guard.add_punch(t, msg.hand)  # this hand's guard readings around t are left out
         elif isinstance(msg, proto.Impact):
             t = clock.to_pi_time(msg.board_ms, fallback=t_recv)
             self.fuser.add_impact(ImpactEvent(t, msg.strength))
@@ -87,11 +90,18 @@ class Hub:
         # RawWindow lines are already in the session log; training scripts read them from there.
 
     def _on_vision(self, line: str) -> None:
-        """Johanan's vision process: {"kind": "punch", ...} or {"kind": "status", ...} once a second."""
+        """Johanan's vision process: {"kind": "guard", ...} ~9x a second (hands up?),
+        {"kind": "status", ...} once a second, and the older {"kind": "punch", ...}."""
         d = json.loads(line)
         kind = d.get("kind", "punch")
         if kind == "status":
             self.vision_status_at = time.monotonic()
+            return
+        if kind == "guard":  # L/R: true = up, false = down, null = can't tell
+            def hand(v):
+                return None if v is None else bool(v)
+
+            self.guard.add_reading(float(d["t"]), hand(d.get("L")), hand(d.get("R")))
             return
         if kind != "punch":
             return
