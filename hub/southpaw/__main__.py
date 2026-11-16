@@ -98,6 +98,7 @@ async def _play(args: argparse.Namespace) -> None:
         rounds=args.rounds,
         round_secs=args.round_secs,
         rest_secs=args.rest_secs,
+        last_rest_secs=args.last_rest_secs,
         summary_secs=args.summary_secs,
         stance=args.stance,
         seed=args.seed,
@@ -226,6 +227,8 @@ def main() -> None:
     g.add_argument("--rounds", type=int, default=3)
     g.add_argument("--round-secs", type=float, default=30.0)
     g.add_argument("--rest-secs", type=float, default=20.0)
+    g.add_argument("--last-rest-secs", type=float, default=15.0,
+                   help="rest after the last round (at most --rest-secs); the pulse sensor needs a few seconds")
     g.add_argument("--summary-secs", type=float, default=10.0)
     g.add_argument("--games", type=int, default=None, help="stop after this many games (default: keep going)")
     g.add_argument("--stance", choices=("orthodox", "southpaw"), default="orthodox")

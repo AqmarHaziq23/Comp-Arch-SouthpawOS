@@ -54,6 +54,15 @@
     BLE code: ble.cpp / ble.h (TinyCircuits STBLE UARTPassThrough example,
     adapted by Yue Ming for the wrists and by Haziq for the bag).
 
+  Heart rate (hub mode, only while the hub is in M,REST):
+    The Pulse Oximetry Wireling (MAX30101) on Wireling Adapter port
+    PULSE_PORT is read every 20 ms, and H,<bpm>,<1|0> goes to the Pi about
+    every 2 s while a finger is on it (nothing is sent without a finger).
+    The sensor's LEDs are switched off in every other mode. The rest screen
+    shows the live BPM. PULSE_ENABLED 0 removes all of it.
+    Pulse code: TinyCircuits MAX30101 library and its MAX30101BasicExample
+    (Ben Rose for TinyCircuits, from Raivis Strogonovs' MAX30100 code).
+
   Buttons:
     Start screen : any button = start
                    hold LOWER-LEFT 3 s = clear the high score
@@ -81,6 +90,12 @@
 #include "BMA250.h"
 #include "ble.h"
 
+// Pulse sensor library: set PULSE_ENABLED to 0 below if you don't have it installed
+#define PULSE_ENABLED       1      // 1 = read heart rate during the hub's REST; 0 = no heart-rate code at all
+#if PULSE_ENABLED
+  #include <MAX30101.h>            // TinyCircuits MAX30101 library (Library Manager, or the GitHub zip)
+#endif
+
 // ------------------------- user settings ---------------------------
 #define USE_WIRELING        0      // 1 = Accelerometer Wireling via adapter
 #define WIRELING_PORT       0      // adapter port the accelerometer Wireling is in (only if USE_WIRELING 1)
@@ -94,8 +109,17 @@
 #define HIT_SOUND_ON        1      // 0 = no beep for each counted punch
 #define WARN_BEFORE_END_MS  10000  // WARN sound when this much time is left
 
+// ---- pulse sensor settings ----
+#define PULSE_PORT          1      // 0-3: Wireling Adapter port the Pulse Oximetry Wireling is in (not the buzzer's)
+
 #if USE_WIRELING && (WIRELING_PORT == BUZZER_PORT)
   #error "The accelerometer Wireling and the buzzer are set to the same adapter port"
+#endif
+#if PULSE_ENABLED && (PULSE_PORT == BUZZER_PORT)
+  #error "The pulse sensor and the buzzer are set to the same adapter port"
+#endif
+#if PULSE_ENABLED && USE_WIRELING && (PULSE_PORT == WIRELING_PORT)
+  #error "The pulse sensor and the accelerometer Wireling are set to the same adapter port"
 #endif
 
 #if defined(ARDUINO_ARCH_SAMD)
@@ -144,6 +168,15 @@ const float    HUB_QUIET_MAX_G  = 0.50;   // movement above this isn't "wobble" 
 const float    HUB_NOISE_ALPHA  = 0.01;   // ~1 s averaging at 100 Hz
 const float    HUB_MAX_THRESH_G = 2.00;   // never make hits harder than this to register
 const uint32_t HUB_REPORT_MS    = 3000;   // how often to print the threshold / near misses
+
+// Heart rate: the pulse sensor is read only while the hub is in REST
+const uint32_t PULSE_POLL_MS        = 20;     // TinyCircuits: polling the sensor faster only adds noise
+const uint32_t HR_SEND_MS           = 2000;   // H message about every 2 s (protocol)
+const uint32_t HR_FINGER_TIMEOUT_MS = 2000;   // no valid pulse for this long = finger is off, send nothing
+const uint16_t HR_SEND_MIN_BPM      = 20;     // the hub rejects H outside 20-250 (protocol.py)
+const uint16_t HR_SEND_MAX_BPM      = 250;
+const uint16_t HR_GOOD_MIN_BPM      = 40;     // sent as unreliable (flag 0) outside 40-200
+const uint16_t HR_GOOD_MAX_BPM      = 200;
 
 // Results
 const uint32_t RESULT_PAGE_MS    = 4000;   // auto-rotate results pages
@@ -1172,6 +1205,96 @@ void drawHubHits(bool flash) {
   printCentered(buf, 54, liberationSans_8ptFontInfo, flash ? C_YELLOW : C_GRAY, C_BLACK);
 }
 
+// ------------------------- heart rate (pulse sensor) ---------------
+// Read only while the hub is in REST: M,REST wakes the sensor (pulseWake), any other
+// mode puts it to sleep (pulseSleep: LEDs off), and loop() calls pulseStep() while it's awake.
+#if PULSE_ENABLED
+MAX30101 pulseSensor = MAX30101();
+bool     pulseOk = false;            // the sensor answered the last begin()
+bool     pulseAwake = false;         // LEDs on and being read (REST only)
+bool     pulseHaveValid = false;     // a valid reading since REST started
+uint16_t pulseBpm = 0;               // latest valid reading
+uint16_t pulseShownBpm = 0;          // what the rest screen shows (0 = "--")
+uint32_t pulsePollMs = 0, pulseSendMs = 0, pulseValidMs = 0;
+#else
+const bool pulseOk = false;
+uint16_t pulseShownBpm = 0;
+#endif
+
+// Bottom line of the REST screen: the live BPM
+void drawHubBpm() {
+  char buf[14];
+  if (!pulseOk)           snprintf(buf, sizeof(buf), "no sensor");
+  else if (pulseShownBpm) snprintf(buf, sizeof(buf), "%u bpm", pulseShownBpm);
+  else                    snprintf(buf, sizeof(buf), "-- bpm");
+  display.drawRect(0, 54, 96, 10, TSRectangleFilled, C_BLACK);
+  printCentered(buf, 54, liberationSans_8ptFontInfo, pulseShownBpm ? C_GREEN : C_GRAY, C_BLACK);
+}
+
+#if PULSE_ENABLED
+// Start-up check: is the sensor there? Leaves its LEDs off.
+void pulseSetup() {
+  Wireling.selectPort(PULSE_PORT);
+  pulseOk = (pulseSensor.begin() == 0);
+  if (pulseOk) pulseSensor.setLEDCurrents(0, 0);
+  SerialMonitorInterface.println(pulseOk ? F("Pulse sensor found") : F("Pulse sensor not found: no heart rate"));
+}
+
+// M,REST: switch the sensor on and forget the last reading.
+void pulseWake(uint32_t now) {
+  Wireling.selectPort(PULSE_PORT);
+  pulseOk = (pulseSensor.begin() == 0);   // checks it is still there, and turns the LEDs back on
+  pulseAwake = pulseOk;
+  pulseHaveValid = false;
+  pulseBpm = 0;
+  pulseShownBpm = 0;
+  pulsePollMs = pulseSendMs = now;
+  SerialMonitorInterface.println(pulseOk ? F("Pulse sensor on") : F("Pulse sensor not found"));
+}
+
+// Any other mode: LEDs off, to save the battery.
+void pulseSleep() {
+  if (!pulseAwake) return;
+  Wireling.selectPort(PULSE_PORT);
+  pulseSensor.setLEDCurrents(0, 0);
+  pulseAwake = false;
+}
+
+// Every pass of loop() while the hub is in REST: read the sensor, send H about every 2 s.
+void pulseStep(uint32_t now) {
+  if (!pulseAwake || now - pulsePollMs < PULSE_POLL_MS) return;
+  pulsePollMs = now;
+  Wireling.selectPort(PULSE_PORT);
+  if (pulseSensor.update() && pulseSensor.pulseValid()) {
+    float bpm = pulseSensor.BPM() + 0.5f;                 // round to a whole number
+    if (bpm >= HR_SEND_MIN_BPM && bpm < HR_SEND_MAX_BPM + 1) {   // the hub only takes 20-250
+      pulseBpm = (uint16_t)bpm;
+      pulseValidMs = now;
+      pulseHaveValid = true;
+    }
+  }
+  bool fingerOn = pulseHaveValid && (now - pulseValidMs) < HR_FINGER_TIMEOUT_MS;
+  uint16_t shown = fingerOn ? pulseBpm : 0;
+  if (shown != pulseShownBpm) {           // keep the rest screen current
+    pulseShownBpm = shown;
+    drawHubBpm();
+  }
+  if (now - pulseSendMs < HR_SEND_MS) return;
+  pulseSendMs = now;
+  if (!fingerOn) return;                  // no finger: send nothing
+  bool good = pulseBpm >= HR_GOOD_MIN_BPM && pulseBpm <= HR_GOOD_MAX_BPM;
+  sendHeartRate(pulseBpm, good);
+  SerialMonitorInterface.print(F("HR sent, bpm="));
+  SerialMonitorInterface.print(pulseBpm);
+  SerialMonitorInterface.println(good ? F(" good") : F(" unreliable"));
+}
+#else
+void pulseSetup() {}
+void pulseWake(uint32_t) {}
+void pulseSleep() {}
+void pulseStep(uint32_t) {}
+#endif
+
 void showHub() {
   display.clearScreen();
   if (strcmp(hubMode, "WAIT") == 0) {
@@ -1185,6 +1308,7 @@ void showHub() {
     printCentered("REST", 6, liberationSans_16ptFontInfo, C_CYAN, C_BLACK);
     printCentered("finger on the", 32, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
     printCentered("pulse sensor", 43, liberationSans_8ptFontInfo, C_WHITE, C_BLACK);
+    drawHubBpm();
     return;
   }
   if (strcmp(hubMode, "SUMMARY") == 0) {
@@ -1231,6 +1355,7 @@ void handleHubLine(const char *line) {
     strncpy(hubCombo, line + 2, sizeof(hubCombo) - 1);
     hubCombo[sizeof(hubCombo) - 1] = '\0';
     strcpy(hubMode, "ROUND");
+    pulseSleep();                     // a combo means REST is over
     playSfx(SFX_CUE);
     showHub();
   } else if (line[0] == 'S' && line[1] == ',') {
@@ -1247,6 +1372,7 @@ void handleHubLine(const char *line) {
       hubMode[sizeof(hubMode) - 1] = '\0';
       if (strcmp(m, "ROUND") == 0) hubCombo[0] = '\0';
       if (strcmp(m, "WAIT") == 0 || strcmp(m, "ROUND") == 0) hubHits = 0;
+      if (strcmp(m, "REST") == 0) pulseWake(millis()); else pulseSleep();   // heart rate only during REST
       showHub();
     }
   }
@@ -1263,6 +1389,11 @@ void setup() {
   Wireling.selectPort(WIRELING_PORT);
 #endif
   pinMode(buzzerPin(), OUTPUT);
+
+  pulseSetup();                       // is the pulse sensor there? (its LEDs stay off until REST)
+#if USE_WIRELING
+  Wireling.selectPort(WIRELING_PORT); // pulseSetup() switched ports: back to the accelerometer
+#endif
 
   display.begin();
   display.setBrightness(10);          // 0-15
@@ -1314,7 +1445,7 @@ void loop() {
   if (bleNow != bleWasConnected) {
     bleWasConnected = bleNow;
     SerialMonitorInterface.println(bleNow ? F("Hub connected") : F("Hub disconnected"));
-    if (!bleNow && state == ST_HUB) goIdle();
+    if (!bleNow && state == ST_HUB) { pulseSleep(); goIdle(); }
   }
 
   // button edge detection
@@ -1461,6 +1592,7 @@ void loop() {
         }
       }
       hubReport(now);
+      if (strcmp(hubMode, "REST") == 0) pulseStep(now);   // heart rate, only during REST
       if (hubFlashing && (int32_t)(now - hubFlashUntilMs) >= 0) {
         hubFlashing = false;
         if (strcmp(hubMode, "ROUND") == 0 || strcmp(hubMode, "WAIT") == 0) drawHubHits(false);
