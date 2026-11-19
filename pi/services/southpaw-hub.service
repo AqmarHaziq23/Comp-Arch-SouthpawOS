@@ -1,0 +1,33 @@
+# SouthpawOS hub: the game itself (Haziq's hub/), started automatically when the Pi boots.
+# It connects the 3 boards over Bluetooth, listens for NFC taps (UDP 5006) and vision (UDP 5005),
+# runs game after game, and sends every round to the Telegram bot (UDP 5007).
+#
+# This is a TEMPLATE: pi/install.sh fills in @USER@ (the Pi account) and @DIR@ (the repo folder)
+# and copies the result to /etc/systemd/system/. Don't copy it by hand.
+
+[Unit]
+Description=SouthpawOS hub (the game)
+# Bluetooth must be up before the hub tries to connect the boards
+After=bluetooth.target network-online.target
+Wants=bluetooth.target network-online.target
+
+[Service]
+User=@USER@
+WorkingDirectory=@DIR@/hub
+# Optional settings (game length, website address + token): pi/southpaw.env. The "-" = fine if it's missing.
+EnvironmentFile=-@DIR@/pi/southpaw.env
+# Print straight away (not in chunks) so `journalctl` shows the game live; allow emoji
+Environment=PYTHONUNBUFFERED=1 PYTHONIOENCODING=utf-8
+# Start with a fresh Bluetooth: right after boot BlueZ can be half-ready, and the boards then connect and
+# drop again and again. Restarting it first (what fixed it by hand) avoids that; the hub is the only
+# Bluetooth user on the Pi. The "+" runs this one step as root (only root may restart Bluetooth).
+ExecStartPre=+/bin/systemctl restart bluetooth
+ExecStartPre=/bin/sleep 5
+# No --games: it keeps going, one game after another. $HUB_ARGS comes from southpaw.env.
+ExecStart=@DIR@/hub/.venv/bin/python -m southpaw play boards.toml $HUB_ARGS
+# If it ever stops (crash, Bluetooth trouble), start it again after 5 s
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

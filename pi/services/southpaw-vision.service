@@ -1,0 +1,21 @@
+# SouthpawOS vision (Johanan's vision/): webcam guard tracking, started automatically when the Pi boots.
+# Sends "hands up?" about 9 times a second to the hub (UDP 5005). The game works without it.
+#
+# TEMPLATE: pi/install.sh fills in @USER@ and @DIR@ and installs it. Don't copy it by hand.
+
+[Unit]
+Description=SouthpawOS vision (guard tracking)
+
+[Service]
+User=@USER@
+WorkingDirectory=@DIR@/vision
+EnvironmentFile=-@DIR@/pi/southpaw.env
+Environment=PYTHONUNBUFFERED=1
+# run_vision.sh: the venv, no window, and a slightly lower CPU priority than the hub.
+# Started through bash, so the script doesn't need to be executable. $VISION_ARGS from southpaw.env.
+ExecStart=/bin/bash @DIR@/vision/run_vision.sh $VISION_ARGS
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

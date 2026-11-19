@@ -1,0 +1,23 @@
+# SouthpawOS Telegram bot (Johanan's telegram_bot/), started automatically when the Pi boots.
+# Links NFC cards to Telegram chats (/link + tap) and messages each player their round results.
+#
+# TEMPLATE: pi/install.sh fills in @USER@ and @DIR@ and installs it. Don't copy it by hand.
+
+[Unit]
+Description=SouthpawOS Telegram bot
+# The bot needs the internet to reach Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=@USER@
+# The bot reads its token from .env in this folder (never shown in the logs)
+WorkingDirectory=@DIR@/telegram_bot
+Environment=PYTHONUNBUFFERED=1 PYTHONIOENCODING=utf-8
+ExecStart=@DIR@/telegram_bot/.venv/bin/python bot.py
+# No internet yet at boot, or a network hiccup? Try again after 10 s
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
