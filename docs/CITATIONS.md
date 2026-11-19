@@ -27,3 +27,4 @@ tutorial, and put a credit comment at the top of the file that uses it.
 | `vision/` (dependency) | OpenCV (`opencv-contrib-python`, installed with MediaPipe) | Apache-2.0 | https://opencv.org | Johanan |
 | `nfc/nfc_reader.py` | Adafruit example `pn532_simpletest.py` (connecting over I²C, `SAM_configuration`, `read_passive_target`), Tony DiCola / ladyada for Adafruit | MIT | https://github.com/adafruit/Adafruit_CircuitPython_PN532 | Johanan |
 | `nfc/` (dependency) | Adafruit CircuitPython PN532 library + Adafruit Blinka (CircuitPython `board`/`busio` on the Pi) | MIT | https://github.com/adafruit/Adafruit_CircuitPython_PN532, https://github.com/adafruit/Adafruit_Blinka | Johanan |
+| `nfc/` (dependency) | Adafruit Python Extended Bus (`ExtendedI2C`: open an I²C bus by number, for `--bus`) | MIT | https://github.com/adafruit/Adafruit_Python_Extended_Bus | Johanan |
