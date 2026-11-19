@@ -140,6 +140,42 @@ async def run_tests():
         f.write(b"JPEG")
     assert camera_check.read_snapshot(folder) == (report(), b"JPEG")
 
+    # --- Owner-only /status and /shutdown (pi_admin.py) ---
+    import pi_admin
+    assert pi_admin.admin_chat_ids(" 123, -456;789, junk,,") == {123, -456, 789}
+    assert pi_admin.admin_chat_ids("") == set()
+    bot.admin_chat_ids = {777}
+    # Not the owner: refused, and told their chat id so the owner can add it
+    text, go = bot.shutdown_reply(333, ["yes"])
+    assert not go and "Only the Pi's owner" in text and "<code>333</code>" in text
+    assert bot.admin_refusal(777) is None
+    # The owner: asked to confirm first, then it's a go
+    text, go = bot.shutdown_reply(777, [])
+    assert not go and "/shutdown yes" in text
+    assert bot.shutdown_reply(777, ["now"])[1] is False
+    text, go = bot.shutdown_reply(777, ["YES"])
+    assert go and "green light stops flickering" in text and "plug the power back in" in text
+    # The status text, from made-up command output (no real Pi needed)
+    fake = {"hostname": "172.20.10.3 fe80::1 \n", "systemctl": "active\nactive\nfailed\nactive\n"}
+    run = lambda cmd: fake.get(cmd[0])
+    ips, states = pi_admin.ip_addresses(run), pi_admin.service_states(run)
+    assert ips == ["172.20.10.3"] and states["southpaw-nfc"] == "failed"
+    text = pi_admin.status_text(ips, states, 3725)
+    assert "<code>172.20.10.3</code>" in text and "⚠️ nfc: failed" in text and "✅ hub: active" in text
+    assert "1 h 2 min" in text
+    assert pi_admin.service_states(lambda cmd: None)["southpaw-hub"] == "unknown"   # e.g. Windows
+    assert "not found" in pi_admin.status_text([], {}, None)
+    # Switching off: success, and a refusal from sudo (rule not added yet)
+    class Result:
+        def __init__(self, code, err=""):
+            self.returncode, self.stderr, self.stdout = code, err, ""
+    assert pi_admin.power_off(lambda *a, **k: Result(0)) == (True, "")
+    ok, error = pi_admin.power_off(lambda *a, **k: Result(1, "sudo: a password is required\n"))
+    assert not ok and error == "sudo: a password is required"
+    def missing(*a, **k):
+        raise FileNotFoundError("sudo")
+    assert pi_admin.power_off(missing)[0] is False
+
     # /me, /last, /unlink
     assert "…B2C3" in bot.describe_links(333)
     assert "No card is linked" in bot.describe_links(111)

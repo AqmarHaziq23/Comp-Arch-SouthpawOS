@@ -103,6 +103,37 @@ sudo systemctl start southpaw-hub     # back to automatic
 ```
 This also applies to running the hub from another account on the Pi.
 
+## Backing up the settings and data
+
+Some files on the Pi aren't in git and can't be rebuilt from it. `pi/backup.sh` packs them into one file:
+
+| File | Holds |
+|---|---|
+| `telegram_bot/.env` | the bot token, `ADMIN_CHAT_IDS` |
+| `telegram_bot/players.db` | which card belongs to which Telegram chat, round history |
+| `pi/southpaw.env` | game settings, the website address + token |
+| `hub/southpaw.db` | scores, sessions, leaderboard |
+| `hub/boards.toml` | the board addresses |
+| `hub/logs/unsent_rounds.jsonl` | rounds still waiting for the website (if any) |
+| `/etc/NetworkManager/system-connections/` | the saved Wi-Fi networks and their passwords (asks for sudo) |
+
+```bash
+bash pi/backup.sh          # makes ~/southpaw-backup-<date>-<time>.tar.gz (outside the repo folder)
+```
+Copy it to your computer. The script prints the exact command, e.g. in PowerShell:
+```powershell
+scp vision@southpaw.local:southpaw-backup-20261120-1830.tar.gz .
+```
+
+**To put it back** (a new SD card, or something got broken): set the Pi up as in steps 1–3, copy the file back with
+`scp southpaw-backup-....tar.gz vision@southpaw.local:`, then run:
+```bash
+bash pi/backup.sh --restore ~/southpaw-backup-20261120-1830.tar.gz    # stops the services, restores, starts them
+```
+- **Keep backups private:** a backup holds the bot token, the website token and Wi-Fi passwords. Only your account can
+  read it on the Pi, and it's never inside the repo folder, so it can't be committed by accident.
+- **The databases** are copied with SQLite's own backup function, so the copy is complete even while the game runs.
+
 ## If something doesn't work
 
 | Problem | Look at |
@@ -113,4 +144,5 @@ This also applies to running the hub from another account on the Pi.
 | Vision says the camera can't be opened | Plugged in? Is `video` in `groups`? Is another vision process running? |
 
 ## Credits
-Plain systemd unit files and a bash script; no borrowed code.
+Plain systemd unit files and bash scripts; no borrowed code. `backup.sh` uses Python's built-in `sqlite3`
+backup function (Python standard library).

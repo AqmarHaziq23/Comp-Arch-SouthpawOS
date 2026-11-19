@@ -21,6 +21,7 @@ Run:   python bot.py
 """
 
 import asyncio
+import html
 import json
 import logging
 import os
@@ -29,6 +30,7 @@ from telegram import BotCommand, Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+import pi_admin
 from core import SouthpawBot
 from storage import Storage
 
@@ -81,7 +83,8 @@ def main():
         """How the core sends a message: Telegram HTML formatting."""
         await app.bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
 
-    core = SouthpawBot(storage, send, link_timeout_s=int(os.environ.get("LINK_TIMEOUT_S", "60")))
+    core = SouthpawBot(storage, send, link_timeout_s=int(os.environ.get("LINK_TIMEOUT_S", "60")),
+                       admin_chat_ids=pi_admin.admin_chat_ids(os.environ.get("ADMIN_CHAT_IDS", "")))
 
     # --- Player commands -------------------------------------------------------------------
     async def reply(update, text):
@@ -111,9 +114,36 @@ def main():
         else:
             await reply(update, text)
 
+    # --- Owner-only commands (ADMIN_CHAT_IDS in .env; not in the players' command menu) ----
+    async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        refusal = core.admin_refusal(update.effective_chat.id)
+        if refusal:
+            await reply(update, refusal)
+            return
+        # Asking the Pi takes a moment: do it outside the bot's main loop so other messages aren't held up
+        ips = await asyncio.to_thread(pi_admin.ip_addresses)
+        states = await asyncio.to_thread(pi_admin.service_states)
+        await reply(update, pi_admin.status_text(ips, states, pi_admin.uptime_s()))
+
+    async def cmd_shutdown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        text, go = core.shutdown_reply(update.effective_chat.id, context.args)
+        await reply(update, text)
+        if not go:
+            return
+        # Wait a few seconds first, so Telegram marks this message as handled. (After the next boot,
+        # drop_pending_updates below also skips anything left over, so it can't shut down again.)
+        await asyncio.sleep(3)
+        ok, error = await asyncio.to_thread(pi_admin.power_off)
+        if not ok:
+            log.warning("Shutdown failed: %s", error)
+            await reply(update, "⚠️ Couldn't switch the Pi off: "
+                                f"<code>{html.escape(error[:200])}</code>\n\n"
+                                "Has <code>bash telegram_bot/allow_shutdown.sh</code> been run once on the Pi? "
+                                "Otherwise use SSH: <code>sudo shutdown now</code>.")
+
     for name, handler in [("start", cmd_start), ("help", cmd_start), ("link", cmd_link),
                           ("me", cmd_me), ("unlink", cmd_unlink), ("last", cmd_last),
-                          ("camera", cmd_camera)]:
+                          ("camera", cmd_camera), ("status", cmd_status), ("shutdown", cmd_shutdown)]:
         app.add_handler(CommandHandler(name, handler))
 
     # --- Things to do once the bot is connected -------------------------------------------
@@ -135,7 +165,9 @@ def main():
 
     app.post_init = post_init
     try:
-        app.run_polling(allowed_updates=Update.ALL_TYPES)   # runs until Ctrl+C
+        # drop_pending_updates: messages sent while the bot was off are skipped when it starts, so an
+        # old /link (or a /shutdown that switched the Pi off) isn't acted on minutes or hours later
+        app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)   # runs until Ctrl+C
     finally:
         storage.close()
 
