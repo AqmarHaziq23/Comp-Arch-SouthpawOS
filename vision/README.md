@@ -71,6 +71,15 @@ without the hub it can't tell punches apart).
 
 **Test without the hub:** `python udp_listener.py` in a second terminal prints what vision sends.
 
+**Camera check for the Telegram bot (`/camera`):** about once a second, vision also saves two files into
+`/dev/shm/southpaw-vision` on the Pi:
+- `latest.jpg`: the picture with the overlay;
+- `latest.json`: what vision can see (person, face, hips, each hand seen/up, checks per second).
+
+`/dev/shm` is in memory, so this doesn't wear out the SD card, and there's only ever one picture. The bot sends
+it to a player who asks (see `telegram_bot/README.md`). Settings are in `config.json` → `snapshot`;
+`--no-snapshot` turns it off for one run.
+
 ### Tuning on recorded clips
 
 ```bash
@@ -110,10 +119,11 @@ One JSON object per UDP datagram to `127.0.0.1:5005`:
 | `pose.py` | MediaPipe result → named body points |
 | `camera.py` | Webcam (newest frame only, auto-reconnect) or a video clip that behaves like one |
 | `sender.py` | UDP messages to the hub |
+| `snapshot.py` | The `/camera` picture + report for the Telegram bot |
 | `vision_config.py` | Every setting's default; `config.json` overrides them |
 | `config.json` | The settings to tune (each section has a `_comment`) |
 | `udp_listener.py` | Fake hub for testing |
-| `test_guard.py` | Tests for the guard rule |
+| `test_guard.py` | Tests for the guard rule and the `/camera` snapshot |
 | `run_vision.sh` | One-command start on the Pi (slightly lower CPU priority than the hub) |
 
 ## Credits

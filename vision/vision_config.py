@@ -54,8 +54,14 @@ DEFAULTS = {
         "heartbeat_interval_s": 1.0,   # "vision is alive" message this often
         "enabled": True,
     },
+    "snapshot": {
+        "enabled": True,          # save a picture + what the camera sees, for the Telegram bot's /camera
+        "interval_s": 1.0,        # how often (the picture the player gets is at most this old)
+        "folder": None,           # None = /dev/shm/southpaw-vision on the Pi (in memory), temp folder elsewhere
+        "jpeg_quality": 70,       # 0-100: 70 keeps the picture ~30 KB, fast to send
+    },
     "debug": {
-        "show_window": True,      # needs a desktop (or Raspberry Pi Connect); turned off by --no-display
+        "show_window": True,     # needs a desktop (or Raspberry Pi Connect); turned off by --no-display
         "record_path": None,      # save the overlay video here (None = don't)
         "print_changes": True,    # print a line whenever a hand drops / comes back up
     },

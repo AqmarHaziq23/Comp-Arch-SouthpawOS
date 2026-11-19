@@ -10,6 +10,8 @@ The live vision process:  webcam -> pose model -> guard check -> hub
     (without the hub it can't tell punches apart, so those numbers include punches)
   * sends a heartbeat every second (fps, person in view, camera OK)
   * optional overlay window / video (skeleton, guard lines, fists in green/red, "HANDS UP!")
+  * about once a second saves a picture with the overlay + what it can see (snapshot.py),
+    for the Telegram bot's /camera check ("is the camera set up right, am I in frame?")
   * keeps running if the camera is unplugged (reconnects) or the hub isn't running
   * runs on its own: the game must work with this process off
 
@@ -22,6 +24,7 @@ Examples (inside the venv, in the vision folder):
   python vision_main.py --source recordings/guard1/video.avi --fast --no-display   # as fast as possible
   python vision_main.py --record overlay.mp4     # save the overlay video (for the YouTube video)
   python vision_main.py --set guard.rear_max_below_mouth=0.2   # try a different setting once
+  python vision_main.py --no-snapshot            # don't save the picture for the bot's /camera check
 
 Test without the hub: run  python udp_listener.py  in a second terminal first.
 """
@@ -39,6 +42,7 @@ from camera import open_source
 from guard import GuardChecker, GuardTracker
 from pose import pose_from_mediapipe
 from sender import HubSender
+from snapshot import SnapshotWriter, camera_report
 from vision_config import load_config
 
 # Lines of the upper-body skeleton for the overlay
@@ -147,10 +151,11 @@ def main():
     parser.add_argument("--record-raw", metavar="FOLDER", help="save the plain camera video to FOLDER (to replay later)")
     parser.add_argument("--no-send", action="store_true", help="don't send anything to the hub")
     parser.add_argument("--quiet", action="store_true", help="don't print drops")
+    parser.add_argument("--no-snapshot", action="store_true", help="don't save the picture for the bot's /camera")
     args = parser.parse_args()
 
     config = load_config(args.config, args.set)
-    cam_cfg, out_cfg, guard_cfg = config["camera"], config["output"], config["guard"]
+    cam_cfg, out_cfg, guard_cfg, snap_cfg = config["camera"], config["output"], config["guard"], config["snapshot"]
     show = config["debug"]["show_window"] and not args.no_display
     record_path = args.record or config["debug"]["record_path"]
     print_changes = config["debug"]["print_changes"] and not args.quiet
@@ -173,8 +178,12 @@ def main():
     tracker = GuardTracker(drop_hold_s=guard_cfg["drop_hold_s"])
     sender = HubSender(out_cfg["hub_host"], out_cfg["hub_port"], enabled=out_cfg["enabled"] and not args.no_send)
     raw = RawRecorder(args.record_raw, (width, height), cam_cfg["fps"]) if args.record_raw else None
+    # The picture for the bot's /camera check (one file, replaced about once a second)
+    snap = (SnapshotWriter(snap_cfg["folder"], snap_cfg["interval_s"])
+            if snap_cfg["enabled"] and not args.no_snapshot else None)
     print(f"Hub: {'udp://%s:%d' % sender.address if sender.enabled else 'not sending'}  "
           f"| stance {config['player']['stance']} (lead hand {checker.lead})")
+    print(f"Camera check picture (/camera): {snap.folder if snap else 'off'}")
 
     # Only run the pose model process_fps times a second (like the Pi); 0 = every frame
     process_every = 1.0 / cam_cfg["process_fps"] if cam_cfg.get("process_fps") else 0.0
@@ -195,6 +204,8 @@ def main():
                     print("End of clip")
                     break
                 camera_ok, pose = False, None          # no frame for a second: camera trouble
+                if snap and snap.due():                # tell the bot: no picture, the camera is gone
+                    snap.write(None, camera_report(None, {}, False, stats["fps"], checker.lead, min_vis))
             else:
                 camera_ok = True
                 last_id, frame, t_capture = got
@@ -243,9 +254,14 @@ def main():
                 stats["infer_ms"] = infer_ms if frames_done == 1 else 0.9 * stats["infer_ms"] + 0.1 * infer_ms
                 stats["sent"], stats["errors"] = sender.sent, sender.errors
 
-                # --- Overlay (only drawn if someone will see it) ---
-                if show or record_path:
+                # --- Overlay (only drawn if someone will see it: window, video or /camera picture) ---
+                snap_due = snap is not None and snap.due()
+                if show or record_path or snap_due:
                     draw_overlay(frame, pose, hands, tracker, checker, stats, min_vis)
+                    if snap_due:   # the /camera picture: the frame with the overlay, as a small JPEG
+                        ok, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, snap_cfg["jpeg_quality"]])
+                        snap.write(jpg.tobytes() if ok else None,
+                                   camera_report(pose, hands, True, stats["fps"], checker.lead, min_vis))
                     if record_path:
                         if writer is None:   # one overlay frame per check, so play it back at the check rate
                             out_fps = cam_cfg["process_fps"] or cam_cfg["fps"]

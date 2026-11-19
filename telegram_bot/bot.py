@@ -7,6 +7,7 @@ Runs as its own program on the Pi (like vision): if it stops, the game still wor
 It does two things at once:
   1. Talks to Telegram ("long polling": it keeps asking Telegram for new messages, so it
      works on a phone hotspot - no port forwarding or public address needed).
+  (/camera also reads vision's latest picture from a folder on the Pi: see camera_check.py.)
   2. Listens on UDP 127.0.0.1:5007 (only programs on the same Pi can send to it) for:
         {"uid": "04A1B2C3"}                                      NFC reader: a card was tapped
         {"kind": "round", "uid": "04A1B2C3", "round": {...}}     hub: a round finished
@@ -102,8 +103,17 @@ def main():
     async def cmd_last(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await reply(update, core.last_round(update.effective_chat.id, update.effective_user.first_name))
 
+    async def cmd_camera(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # A photo from vision with the check as its caption; only the text if there's no fresh picture
+        text, photo = core.camera_reply(update.effective_chat.id)
+        if photo:
+            await update.message.reply_photo(photo=photo, caption=text, parse_mode=ParseMode.HTML)
+        else:
+            await reply(update, text)
+
     for name, handler in [("start", cmd_start), ("help", cmd_start), ("link", cmd_link),
-                          ("me", cmd_me), ("unlink", cmd_unlink), ("last", cmd_last)]:
+                          ("me", cmd_me), ("unlink", cmd_unlink), ("last", cmd_last),
+                          ("camera", cmd_camera)]:
         app.add_handler(CommandHandler(name, handler))
 
     # --- Things to do once the bot is connected -------------------------------------------
@@ -112,6 +122,7 @@ def main():
         await application.bot.set_my_commands([
             BotCommand("link", "Link your NFC player card"),
             BotCommand("last", "Show your most recent round"),
+            BotCommand("camera", "Check the camera can see you (photo)"),
             BotCommand("me", "Which card is linked to you"),
             BotCommand("unlink", "Stop receiving round results"),
             BotCommand("help", "How this bot works"),
