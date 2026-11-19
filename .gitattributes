@@ -1,0 +1,3 @@
+# Shell scripts always get Linux line endings, also when checked out on Windows.
+# (Windows line endings break them on the Pi: "env: 'bash\r': No such file or directory".)
+*.sh text eol=lf

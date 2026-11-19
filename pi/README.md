@@ -1,0 +1,116 @@
+# Pi setup: everything starts by itself (Member D)
+
+Switch the Pi on and the whole game is ready, without logging in or typing anything.
+**Four programs run in the background as systemd services**, all from **one account** and one copy of the repo:
+
+| Service | Program | Folder | Talks to |
+|---|---|---|---|
+| `southpaw-hub` | the game: boards over Bluetooth, rounds, scores | `hub/` | boards (BLE), listens on UDP 5005 + 5006, sends to 5007 |
+| `southpaw-bot` | Telegram bot | `telegram_bot/` | Telegram (internet), listens on UDP 5007 |
+| `southpaw-nfc` | NFC card reader | `nfc/` | sends each tap to UDP 5006 + 5007 |
+| `southpaw-vision` | webcam guard tracking | `vision/` | sends to UDP 5005 |
+
+- **Order doesn't matter:** they only talk over local UDP, so each one can start, stop or crash on its own.
+- **Restarts:** systemd restarts a program 5–10 s after it stops.
+- **Everything is optional:** the game runs without the bot, the reader or the camera, as before.
+
+**The game after boot:** wait about 30 s, switch on the 3 boards, and the bag shows the start screen.
+Then tap your card and hit the bag 5 times. The hub plays one game after another, forever.
+
+## One-time setup
+
+All commands are on the Pi, in the account that will run everything (we use `vision`), from the repo folder
+(here `~/southpaw`).
+
+### 1. The code
+The repo is private, so the code is copied from a desktop with the repo on it (Windows PowerShell):
+
+```powershell
+cd <the repo folder>
+# autocrlf=false keeps Linux line endings; -o + scp because a PowerShell pipe damages the archive
+git -c core.autocrlf=false archive -o "$env:TEMP\southpaw.tar" HEAD
+scp "$env:TEMP\southpaw.tar" vision@southpaw.local:
+```
+```bash
+# Pi: unpack over ~/southpaw. Your .venv folders, .env, boards.toml and databases stay as they are.
+mkdir -p ~/southpaw && tar -xf ~/southpaw.tar -C ~/southpaw && rm ~/southpaw.tar
+```
+
+### 2. Each program once by hand
+Each part needs its own venv. See each folder's README; in short:
+
+```bash
+cd ~/southpaw
+# hub
+python3 -m venv hub/.venv && hub/.venv/bin/pip install -r hub/requirements.txt
+cp -n hub/boards.example.toml hub/boards.toml
+# Telegram bot: plus telegram_bot/.env with the bot token (telegram_bot/README.md)
+python3 -m venv telegram_bot/.venv && telegram_bot/.venv/bin/pip install -r telegram_bot/requirements.txt
+# NFC reader (I2C turned on, see nfc/README.md)
+python3 -m venv nfc/.venv && nfc/.venv/bin/pip install -r nfc/requirements.txt
+# vision: needs Python 3.12 through uv (vision/README.md)
+cd vision && uv venv --python 3.12 .venv && uv pip install -r requirements.txt && cd ..
+```
+
+**Check that this account can reach every piece of hardware:**
+
+```bash
+groups                                         # should include video and i2c
+(cd hub && .venv/bin/python -m southpaw scan)  # lists P1D-WRIST-L, P1D-WRIST-R and P1D-BAG
+```
+
+If the scan says it isn't allowed to use Bluetooth: `sudo adduser $USER bluetooth`, log out and back in, and scan
+again.
+
+### 3. Switch on auto-start
+```bash
+bash pi/install.sh
+```
+It installs and starts the 4 services and prints whether each one is `active`. If a part isn't set up yet
+(no `.venv`, no `boards.toml`, no bot token), it says so and skips that one. Set it up and run the script again.
+
+## Settings: `pi/southpaw.env`
+`install.sh` makes it the first time. It's git-ignored because it can hold the website token.
+
+| Setting | For | Example |
+|---|---|---|
+| `HUB_ARGS` | the game's options | `--rounds 1 --round-secs 30 --rest-secs 15` (default: 3 rounds of 30 s, 20 s rest) |
+| `SOUTHPAW_SERVER`, `INGEST_TOKEN` | upload every round to Jovis's website | empty = no upload |
+| `NFC_ARGS` | the reader's options | `--bus 6` |
+| `VISION_ARGS` | vision's options | `--source 1` |
+
+After changing it: `sudo systemctl restart southpaw-hub` (or the service you changed).
+
+## Day to day
+
+| What | Command |
+|---|---|
+| Are they running? | `systemctl status 'southpaw-*'` (q to quit) |
+| Watch the game live | `journalctl -u southpaw-hub -f` (Ctrl+C stops watching, not the game) |
+| Watch everything | `journalctl -u 'southpaw-*' -f` |
+| Restart one / all | `sudo systemctl restart southpaw-hub` / `sudo systemctl restart 'southpaw-*'` |
+| Stop one until the next boot | `sudo systemctl stop southpaw-vision` |
+| After copying new code (step 1) | `sudo systemctl restart 'southpaw-*'` |
+| Turn auto-start off again | `bash pi/install.sh --remove` |
+
+**Running a program by hand (to test or debug):** stop its service first. Two hubs can't share the boards, and
+two bots with the same token make Telegram answer "Conflict":
+
+```bash
+sudo systemctl stop southpaw-hub
+cd ~/southpaw/hub && .venv/bin/python -m southpaw play boards.toml --games 1 --rounds 1
+sudo systemctl start southpaw-hub     # back to automatic
+```
+This also applies to running the hub from another account on the Pi.
+
+## If something doesn't work
+
+| Problem | Look at |
+|---|---|
+| A service shows `failed` or `activating (auto-restart)` | `journalctl -u <service> -n 50`: the last 50 lines say why |
+| The hub keeps waiting for a board | Is the board switched on? Is it already connected somewhere else (a phone, a laptop, a second hub)? `sudo systemctl restart bluetooth southpaw-hub` |
+| The bot doesn't answer | Is it running on another computer too (Conflict)? Is the Pi online? |
+| Vision says the camera can't be opened | Plugged in? Is `video` in `groups`? Is another vision process running? |
+
+## Credits
+Plain systemd unit files and a bash script; no borrowed code.

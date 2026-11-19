@@ -15,6 +15,7 @@ ICT1011 / INF1101 team exploration project, Team P1D.
 | `vision/` | MediaPipe pose tracking: is the guard up? | Johanan (D) |
 | `telegram_bot/` | Telegram bot: link your NFC card, get each round's results | Johanan (D) |
 | `nfc/` | PN532 NFC card reader: tap your card to sign in | Johanan (D) |
+| `pi/` | Pi setup: start the hub, bot, NFC reader and vision automatically at boot | Johanan (D) |
 | `dashboard/` | Web dashboard and player pages | Jovis (E) |
 | `training/` | Punch classifier training and export | A, C |
 | `docs/CITATIONS.md` | Every source we use (required by the brief) | Everyone |

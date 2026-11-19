@@ -1,0 +1,20 @@
+# SouthpawOS NFC card reader (Johanan's nfc/), started automatically when the Pi boots.
+# Every card tap goes to the hub (UDP 5006) and the Telegram bot (UDP 5007).
+#
+# TEMPLATE: pi/install.sh fills in @USER@ and @DIR@ and installs it. Don't copy it by hand.
+
+[Unit]
+Description=SouthpawOS NFC card reader
+
+[Service]
+User=@USER@
+WorkingDirectory=@DIR@/nfc
+EnvironmentFile=-@DIR@/pi/southpaw.env
+Environment=PYTHONUNBUFFERED=1
+# $NFC_ARGS comes from southpaw.env (for example --bus 6)
+ExecStart=@DIR@/nfc/.venv/bin/python nfc_reader.py $NFC_ARGS
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
