@@ -15,6 +15,11 @@ tested without a real Telegram bot. It handles:
       {"kind": "card",  "uid": "04A1B2C3"}                     (same thing, older form; simulate.py)
       {"kind": "round", "uid": "04A1B2C3", "round": {...}}     hub: a round finished, send the summary
 
+  * /camera: a photo from vision with a short "can the camera see you?" check
+    (camera_check.py). Only for chats with a linked card: linking needs a tap on the real
+    reader, so only people at the bag can see pictures of the room. The "card scanned"
+    message also gets a one-line camera check while vision is running.
+
 Why a Telegram bot can't just use @usernames: bots may only message people who have
 opened the bot and pressed Start, and they do it by numeric chat id. That's why each
 player links their card once with /link.
@@ -24,6 +29,7 @@ import html
 import logging
 import time
 
+import camera_check
 from formatting import format_round
 from storage import normalise_uid
 
@@ -31,15 +37,20 @@ log = logging.getLogger("southpaw.core")
 
 
 class SouthpawBot:
-    def __init__(self, storage, send, link_timeout_s=60, clock=time.monotonic):
+    def __init__(self, storage, send, link_timeout_s=60, clock=time.monotonic,
+                 read_camera=camera_check.read_snapshot, wall_clock=time.time):
         """
-        storage: a Storage (storage.py)
-        send:    async function send(chat_id, html_text) that delivers a Telegram message
+        storage:     a Storage (storage.py)
+        send:        async function send(chat_id, html_text) that delivers a Telegram message
+        read_camera: function returning vision's latest (report, jpeg_bytes) (camera_check.py)
+        wall_clock:  the time of day in seconds (vision's report says when it was made)
         """
         self.storage = storage
         self.send = send
         self.link_timeout_s = link_timeout_s
         self.clock = clock
+        self.read_camera = read_camera
+        self.wall_clock = wall_clock
         self.pending = None   # waiting /link: {"chat_id", "username", "first_name", "expires"}
 
     # ------------------------------------------------------------------------------------
@@ -55,6 +66,7 @@ class SouthpawBot:
                 "Other commands:\n"
                 "/me - which card is linked to you\n"
                 "/last - your most recent round\n"
+                "/camera - check the camera can see you (photo)\n"
                 "/unlink - stop receiving results")
 
     async def start_link(self, chat_id, username, first_name):
@@ -95,6 +107,26 @@ class SouthpawBot:
         received_at, data = last
         when = time.strftime("%d %b %Y, %H:%M", time.localtime(received_at))
         return format_round(data, first_name) + f"\n\n<i>Played {when}</i>"
+
+    def camera_reply(self, chat_id):
+        """Player sent /camera. Returns (reply text, photo bytes or None)."""
+        if not self.storage.cards_for_chat(chat_id):
+            return ("📷 /camera is for players: link your card first with /link "
+                    "(tap it on the reader at the bag)."), None
+        report, photo = self._camera_snapshot()
+        now = self.wall_clock()
+        text = camera_check.full_text(report, now)
+        if camera_check.is_fresh(report, now) and report.get("camera"):
+            return text, photo
+        return text, None            # vision stopped or the camera is gone: never send an old picture
+
+    def _camera_snapshot(self):
+        """Vision's latest (report, photo). Never crashes the bot if something is odd."""
+        try:
+            return self.read_camera()
+        except Exception as error:
+            log.warning("Could not read the camera picture: %s", error)
+            return None, None
 
     # ------------------------------------------------------------------------------------
     # Messages from the hub (called by bot.py's UDP listener)
@@ -140,8 +172,11 @@ class SouthpawBot:
         player = self.storage.player_for_card(uid)
         if player:
             name = html.escape(player["first_name"] or "there")
-            await self._safe_send(player["chat_id"],
-                                  f"👋 Hi {name}, card scanned! Punch the bag <b>5 times</b> to start your round.")
+            text = f"👋 Hi {name}, card scanned! Punch the bag <b>5 times</b> to start your round."
+            line = camera_check.short_line(self._camera_snapshot()[0], self.wall_clock())
+            if line:   # vision is running: say whether it can see the player
+                text += "\n\n" + line
+            await self._safe_send(player["chat_id"], text)
         else:
             log.info("Unknown card %s tapped (not linked to anyone)", uid)
 

@@ -149,6 +149,63 @@ def test_unknown_frames_dont_count_and_camera_gaps_are_capped():
     assert t.hands["L"].known_s == 0.5 and t.hands["R"].known_s == 0.0
 
 
+# --- The /camera check picture (snapshot.py) ----------------------------------------------
+
+def test_camera_report_says_what_the_camera_can_see():
+    from snapshot import camera_report
+    cfg = config()
+    checker = GuardChecker(cfg)
+    # Everyone in view, both hands up
+    pose = make_pose()
+    r = camera_report(pose, checker.check(pose), True, 8.94, "L", 0.5, now=100.0)
+    assert r["person"] and r["face"] and r["hips"] and r["camera"] and r["fps"] == 8.9 and r["t"] == 100.0
+    assert r["hands"]["L"] == {"seen": True, "up": True} and r["hands"]["R"]["seen"]
+    # Left wrist hidden, hips out of view
+    pose = make_pose(hidden=("L_WRIST", "L_HIP"))
+    r = camera_report(pose, checker.check(pose), True, 9, "L", 0.5)
+    assert not r["hands"]["L"]["seen"] and r["hands"]["R"]["seen"] and not r["hips"]
+    # Nobody there, and the camera gone
+    r = camera_report(None, {}, False, 0, "L", 0.5)
+    assert not r["person"] and not r["camera"] and r["hands"]["L"] == {"seen": False, "up": None}
+
+
+def test_snapshot_writer_replaces_the_files_at_most_once_per_interval():
+    import json
+    import os
+    import tempfile
+    from snapshot import SnapshotWriter
+    t = [0.0]
+    folder = os.path.join(tempfile.mkdtemp(), "snap")
+    w = SnapshotWriter(folder, interval_s=1.0, clock=lambda: t[0])
+    assert w.due()
+    assert w.write(b"JPEG1", {"t": 1, "person": True})
+    assert not w.due()                                  # just saved: not again yet
+    t[0] = 1.0
+    assert w.due()
+    w.write(None, {"t": 2, "camera": False})            # no picture: only the report changes
+    with open(os.path.join(folder, "latest.json")) as f:
+        report = json.load(f)
+    assert report == {"t": 2, "camera": False, "image": False}
+    with open(os.path.join(folder, "latest.jpg"), "rb") as f:
+        assert f.read() == b"JPEG1"
+    assert sorted(os.listdir(folder)) == ["latest.jpg", "latest.json"]   # no .tmp files left over
+    # The folder disappears (on the Pi: logging out cleans /dev/shm): the next save makes it again
+    import shutil
+    shutil.rmtree(folder)
+    t[0] = 2.0
+    assert w.write(b"JPEG2", {"t": 3}) and os.path.exists(os.path.join(folder, "latest.jpg"))
+
+
+def test_snapshot_writer_never_crashes_vision():
+    import os
+    import tempfile
+    from snapshot import SnapshotWriter
+    blocker = os.path.join(tempfile.mkdtemp(), "a_file")
+    open(blocker, "w").close()
+    w = SnapshotWriter(os.path.join(blocker, "snap"))   # a folder inside a FILE can't be made
+    assert w.write(b"x", {"t": 1}) is False and w.errors == 1
+
+
 if __name__ == "__main__":
     for name, test in list(globals().items()):
         if name.startswith("test_") and callable(test):

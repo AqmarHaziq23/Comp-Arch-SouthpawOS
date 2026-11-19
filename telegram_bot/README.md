@@ -37,7 +37,34 @@ hotspot — no port forwarding or public address needed. The Pi just needs inter
 | `/link` | Link an NFC card (tap it on the Pi within 60 s) |
 | `/me` | Which card is linked |
 | `/last` | Most recent round again |
+| `/camera` | Photo from the camera + "can it see you?" check (linked players only) |
 | `/unlink` | Remove the link, stop receiving results |
+
+## `/camera`: is the camera set up right?
+
+The player sends `/camera` and gets the newest webcam picture (at most a second old) with the overlay drawn
+on it: skeleton, each hand's "hands up" line, and fists circled green (up), red (down) or grey (can't tell).
+It comes with a check:
+
+```
+📷 Camera check (8.9 checks/s)
+✅ I can see you
+✅ Face
+⚠️ Left hand (lead): can't see it. Turn the camera or step back so both hands are in the picture
+✅ Right hand (rear): up
+⚠️ I can't see your hips: step back or tilt the camera down. I need you from head to hips
+```
+
+- **On every card tap,** the "card scanned" message also gets one camera line, for example
+  `📷 Camera: ✅ sees you and both hands.` or `📷 Camera: ⚠️ can't see your left hand. Send /camera to check.`
+  There's no line when vision isn't running (vision is optional).
+- **Where the picture comes from:** about once a second, vision (`vision/snapshot.py`) saves `latest.jpg` and
+  `latest.json` into `/dev/shm/southpaw-vision` on the Pi. That folder is in memory, not on the SD card, and
+  holds only one picture, always replaced. `camera_check.py` reads it.
+- **Both programs must run on the same Pi under the same account.** They do with `pi/install.sh`. If vision
+  uses another folder, set `VISION_SNAPSHOT_DIR` in `.env`.
+- **Only linked players** can use it. Linking needs a tap on the real reader, so only people at the bag can see
+  pictures of the room. An old picture (vision stopped) is never sent.
 
 ## Messages the bot receives
 
@@ -109,7 +136,8 @@ Logic tests (no Telegram needed): `python test_core.py`
 | File | Purpose |
 |---|---|
 | `bot.py` | **Run this.** Telegram commands + listens for the hub |
-| `core.py` | The logic: linking, card taps, round summaries |
+| `core.py` | The logic: linking, card taps, round summaries, `/camera` |
+| `camera_check.py` | Reads vision's latest picture and writes the `/camera` check |
 | `formatting.py` | Builds the round-summary message |
 | `storage.py` | Local SQLite database (`players.db`) |
 | `simulate.py` | Pretends to be the NFC reader and hub (testing) |
@@ -124,3 +152,5 @@ Logic tests (no Telegram needed): `python test_core.py`
 - **Linking needs the physical card** on the reader within 60 s of `/link`, so nobody can link a card
   remotely. (NFC UIDs *can* be cloned with the right tools: fine for a game, not for anything sensitive.)
 - `players.db` holds Telegram chat ids and round history: personal data. It stays on the Pi and is git-ignored.
+- **`/camera` pictures** only go to chats with a linked card. Vision keeps its one picture in memory
+  (`/dev/shm`), only its own account can open that folder, and the picture is gone after a reboot.

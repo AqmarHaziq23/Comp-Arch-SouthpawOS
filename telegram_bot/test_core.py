@@ -37,7 +37,9 @@ async def run_tests():
         sent.append((chat_id, text))
 
     clock = Clock()
-    bot = SouthpawBot(Storage(os.path.join(tempfile.mkdtemp(), "test.db")), fake_send, 60, clock)
+    camera = {"report": None, "photo": None}           # what the fake vision "saved" (None = vision not running)
+    bot = SouthpawBot(Storage(os.path.join(tempfile.mkdtemp(), "test.db")), fake_send, 60, clock,
+                      read_camera=lambda: (camera["report"], camera["photo"]), wall_clock=lambda: 5000.0)
 
     # An unknown card, and a round for it: stored, nothing sent
     await bot.card_tapped("04:a1:b2:c3")
@@ -74,6 +76,69 @@ async def run_tests():
     await bot.card_tapped("04A1B2C3")
     assert bot.storage.player_for_card("04A1B2C3")["chat_id"] == 333
     assert any(c == 111 and "another Telegram account" in t for c, t in sent[-2:])
+
+    # --- /camera (Carol has Alice's old card now) ---
+    def report(**changes):
+        """A fresh vision report: everything in view, both hands up. Change any part with keywords."""
+        r = {"t": 4999.0, "camera": True, "person": True, "face": True, "hips": True, "fps": 8.9,
+             "lead": "L", "image": True, "hands": {"L": {"seen": True, "up": True}, "R": {"seen": True, "up": True}}}
+        r.update(changes)
+        return r
+
+    # Only chats with a linked card may see camera pictures
+    text, photo = bot.camera_reply(999)
+    assert photo is None and "link your card first" in text
+    # Vision not running: a clear message, no photo; the "card scanned" hello says nothing about the camera
+    text, photo = bot.camera_reply(333)
+    assert photo is None and "Vision isn't running" in text
+    await bot.card_tapped("04A1B2C3")
+    assert "Punch the bag" in sent[-1][1] and "Camera" not in sent[-1][1]
+    # All in view: the photo comes with the check
+    camera["report"], camera["photo"] = report(), b"JPEG"
+    text, photo = bot.camera_reply(333)
+    assert photo == b"JPEG" and "I can see you" in text and "All set" in text and "8.9 checks/s" in text
+    await bot.card_tapped("04A1B2C3")
+    assert "Camera: ✅ sees you and both hands" in sent[-1][1]
+    # Left (lead) hand out of view, hips too
+    camera["report"] = report(hips=False, hands={"L": {"seen": False, "up": None}, "R": {"seen": True, "up": False}})
+    text, photo = bot.camera_reply(333)
+    assert "Left hand (lead): can't see it" in text and "Right hand (rear): seen (down" in text
+    assert "hips" in text and "All set" not in text
+    await bot.card_tapped("04A1B2C3")
+    assert "can't see your left hand or your hips" in sent[-1][1]
+    # Nobody in view
+    camera["report"] = report(person=False)
+    assert "can't see anyone" in bot.camera_reply(333)[0]
+    # An old picture (vision stopped) is never sent; neither is one when the camera is gone
+    camera["report"] = report(t=4900.0)
+    text, photo = bot.camera_reply(333)
+    assert photo is None and "Vision stopped about 100 s ago" in text
+    await bot.card_tapped("04A1B2C3")
+    assert "Camera" not in sent[-1][1]
+    camera["report"] = report(camera=False, image=False)
+    text, photo = bot.camera_reply(333)
+    assert photo is None and "isn't sending pictures" in text
+    # A slow Pi gets a warning; a broken camera reader never crashes the bot
+    camera["report"] = report(fps=3.2)
+    assert "Only 3.2 checks a second" in bot.camera_reply(333)[0]
+    def broken_camera():
+        raise OSError("disk on fire")
+    bot.read_camera = broken_camera
+    assert "Vision isn't running" in bot.camera_reply(333)[0]
+    bot.read_camera = lambda: (None, None)
+
+    # Reading vision's real files: missing folder, a broken report, a good one
+    import camera_check
+    folder = tempfile.mkdtemp()
+    assert camera_check.read_snapshot(os.path.join(folder, "nothing")) == (None, None)
+    with open(os.path.join(folder, "latest.json"), "w") as f:
+        f.write("{not json")
+    assert camera_check.read_snapshot(folder) == (None, None)
+    with open(os.path.join(folder, "latest.json"), "w") as f:
+        json.dump(report(), f)
+    with open(os.path.join(folder, "latest.jpg"), "wb") as f:
+        f.write(b"JPEG")
+    assert camera_check.read_snapshot(folder) == (report(), b"JPEG")
 
     # /me, /last, /unlink
     assert "…B2C3" in bot.describe_links(333)

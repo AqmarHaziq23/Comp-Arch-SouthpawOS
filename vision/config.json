@@ -35,6 +35,13 @@
     "heartbeat_interval_s": 1.0,
     "enabled": true
   },
+  "snapshot": {
+    "_comment": "For the Telegram bot's /camera: a picture with the overlay + what the camera sees, saved every interval_s seconds. folder null = /dev/shm/southpaw-vision on the Pi (in memory, not the SD card).",
+    "enabled": true,
+    "interval_s": 1.0,
+    "folder": null,
+    "jpeg_quality": 70
+  },
   "debug": {
     "_comment": "show_window needs a desktop. record_path: save the overlay video (null = off).",
     "show_window": true,
