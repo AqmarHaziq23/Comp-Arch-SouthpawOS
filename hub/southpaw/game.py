@@ -34,6 +34,7 @@ class GameConfig:
     rounds: int = 3
     round_secs: float = 30.0
     rest_secs: float = 20.0
+    last_rest_secs: float = 15.0   # the rest after the final round (at most rest_secs): long enough for a heart-rate reading
     summary_secs: float = 10.0
     start_hits: int = 5            # bag hits that start a game
     start_window: float = 6.0      # ...within this many seconds
@@ -266,7 +267,7 @@ class Game:
         self.state = "rest"
         await self.hub.send("bag", proto.mode_msg("REST"))
         before = len(self.hub.heart_rates)
-        await asyncio.sleep(self.cfg.rest_secs if not last else min(self.cfg.rest_secs, 5.0))
+        await asyncio.sleep(self.cfg.rest_secs if not last else min(self.cfg.rest_secs, self.cfg.last_rest_secs))
         readings = self.hub.heart_rates[before:]
         good = [x for x in readings if x[2]]
         pick = (good or readings)[-1] if readings else None
