@@ -93,7 +93,7 @@
 // Pulse sensor library: set PULSE_ENABLED to 0 below if you don't have it installed
 #define PULSE_ENABLED       1      // 1 = read heart rate during the hub's REST; 0 = no heart-rate code at all
 #if PULSE_ENABLED
-  #include <MAX30101.h>            // TinyCircuits MAX30101 library (Library Manager, or the GitHub zip)
+#include <MAX30101.h>            // TinyCircuits MAX30101 library (Library Manager, or the GitHub zip)
 #endif
 
 // ------------------------- user settings ---------------------------
