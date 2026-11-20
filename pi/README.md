@@ -78,8 +78,32 @@ It installs and starts the 4 services and prints whether each one is `active`. I
 | `SOUTHPAW_SERVER`, `INGEST_TOKEN` | upload every round to Jovis's website | empty = no upload |
 | `NFC_ARGS` | the reader's options | `--bus 6` |
 | `VISION_ARGS` | vision's options | `--source 1` |
+| `BT_FIRST_SECS` | at boot, Wi-Fi stays off until the boards connect, at most this long (see below) | `180` (default), `0` = off |
 
 After changing it: `sudo systemctl restart southpaw-hub` (or the service you changed).
+
+## Wi-Fi off while the boards connect (`southpaw-btfirst`)
+
+On a Pi 4, **Wi-Fi and Bluetooth share one chip and one antenna**. With the Pi's Wi-Fi on **2.4 GHz** (for example a
+phone hotspot with "Maximize Compatibility" on) in a room full of Bluetooth devices, the boards can't finish
+connecting: the hub log fills with `bag disconnected` / `wristL disconnected`, and `sudo btmon` shows
+`Connection Failed to be Established (0x3e)`. At home with few devices around it works; in a busy room it doesn't.
+Once a board is connected it usually stays connected.
+
+So at every boot `southpaw-btfirst` (`pi/bluetooth_first.sh`) keeps **Wi-Fi off until the hub says
+`all boards connected`** (at most `BT_FIRST_SECS`, default 3 minutes), then switches it back on. Wi-Fi always comes
+back on, also if something goes wrong.
+
+- **Switch the 3 boards on within the first ~3 minutes** after switching the Pi on.
+- While Wi-Fi is off: no SSH over Wi-Fi, the bot can't reach Telegram, nothing is uploaded. It catches up after.
+- **A board dropped later and won't come back?** Switch the boards off, run this, then switch them on straight away
+  (SSH freezes until they're connected):
+  ```bash
+  sudo bash ~/southpaw/pi/bluetooth_first.sh --restart-hub
+  ```
+- On a **5 GHz** network (or Ethernet) this isn't needed: set `BT_FIRST_SECS=0`. The Pi only uses 5 GHz when its Wi-Fi
+  country is set: `sudo raspi-config nonint get_wifi_country` should say `SG`
+  (`sudo raspi-config nonint do_wifi_country SG`, then reboot).
 
 ## Day to day
 
@@ -108,6 +132,8 @@ This also applies to running the hub from another account on the Pi.
 | Problem | Look at |
 |---|---|
 | A service shows `failed` or `activating (auto-restart)` | `journalctl -u <service> -n 50`: the last 50 lines say why |
+| Boards connect and drop again and again (`... disconnected` many times a second) | The Pi's 2.4 GHz Wi-Fi, see "Wi-Fi off while the boards connect" above |
+| A board's screen says connected, but the hub says `not found` | A half-open link: `bluetoothctl devices Connected` lists it. `sudo systemctl restart southpaw-hub` (restarts Bluetooth too) |
 | The hub keeps waiting for a board | Is the board switched on? Is it already connected somewhere else (a phone, a laptop, a second hub)? `sudo systemctl restart bluetooth southpaw-hub` |
 | The bot doesn't answer | Is it running on another computer too (Conflict)? Is the Pi online? |
 | Vision says the camera can't be opened | Plugged in? Is `video` in `groups`? Is another vision process running? |
