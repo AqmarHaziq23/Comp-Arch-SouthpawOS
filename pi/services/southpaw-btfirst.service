@@ -1,0 +1,20 @@
+# SouthpawOS: at boot, keep the Pi's Wi-Fi off until the 3 boards have connected (pi/bluetooth_first.sh).
+# On a Pi 4, 2.4 GHz Wi-Fi blocks the boards' Bluetooth connections in a busy room; once connected they stay.
+# Runs once per boot, then ends. Wi-Fi always comes back on (after "all boards connected", or BT_FIRST_SECS).
+#
+# TEMPLATE: pi/install.sh fills in @DIR@ and installs it. Don't copy it by hand.
+
+[Unit]
+Description=SouthpawOS: boards connect first, then Wi-Fi
+After=bluetooth.target
+
+[Service]
+# simple = runs in the background, so the rest of the boot (desktop, SSH over cable) doesn't wait for it
+Type=simple
+# Runs as root (only root may switch Wi-Fi off and on). BT_FIRST_SECS comes from southpaw.env.
+EnvironmentFile=-@DIR@/pi/southpaw.env
+ExecStart=/bin/bash @DIR@/pi/bluetooth_first.sh
+# No Restart=: once per boot is enough. Run it again by hand if needed (see the script).
+
+[Install]
+WantedBy=multi-user.target

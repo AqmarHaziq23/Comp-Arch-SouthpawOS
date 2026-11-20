@@ -6,6 +6,7 @@
 #   southpaw-bot     the Telegram bot                                telegram_bot/
 #   southpaw-nfc     the NFC card reader                             nfc/
 #   southpaw-vision  the webcam guard tracking                       vision/
+# plus southpaw-btfirst: at boot, Wi-Fi stays off until the boards have connected (pi/bluetooth_first.sh).
 # A part that isn't set up yet (no .venv, no boards.toml, no bot token) is skipped with a message,
 # so you can run this again later once it is.
 #
@@ -20,7 +21,7 @@ set -u
 PI_DIR="$(cd "$(dirname "$0")" && pwd)"     # .../pi
 DIR="$(dirname "$PI_DIR")"                  # the repo folder (hub/, nfc/, vision/, ... are in here)
 ME="$(id -un)"                              # the account the services will run as
-SERVICES="southpaw-hub southpaw-bot southpaw-nfc southpaw-vision"
+SERVICES="southpaw-hub southpaw-bot southpaw-nfc southpaw-vision southpaw-btfirst"
 
 if [ "$ME" = "root" ]; then
     echo "Run this as your normal account, without sudo in front:  bash pi/install.sh"
@@ -60,6 +61,8 @@ ready() {
             [ -x "$DIR/nfc/.venv/bin/python" ] || { echo "  no nfc/.venv"; return 1; } ;;
         southpaw-vision)
             [ -x "$DIR/vision/.venv/bin/python" ] || { echo "  no vision/.venv (uv venv --python 3.12, see vision/README.md)"; return 1; } ;;
+        southpaw-btfirst)
+            ready southpaw-hub > /dev/null || { echo "  needs the hub set up first"; return 1; } ;;
     esac
     return 0
 }
@@ -86,14 +89,19 @@ fi
 sudo systemctl daemon-reload
 for s in $installed; do
     sudo systemctl enable "$s" > /dev/null 2>&1
-    sudo systemctl restart "$s"
+    # btfirst switches Wi-Fi off, which would cut this SSH session: it only runs at the next boot
+    [ "$s" = "southpaw-btfirst" ] || sudo systemctl restart "$s"
 done
 
 sleep 3
 echo
 echo "Running now (and from now on at every boot):"
 for s in $installed; do
-    printf "  %-17s %s\n" "$s" "$(systemctl is-active "$s")"
+    if [ "$s" = "southpaw-btfirst" ]; then
+        printf "  %-17s %s\n" "$s" "enabled: runs at the next boot (Wi-Fi off until the boards connect)"
+    else
+        printf "  %-17s %s\n" "$s" "$(systemctl is-active "$s")"
+    fi
 done
 echo
 echo "Watch one live:   journalctl -u southpaw-hub -f      (Ctrl+C stops watching, not the program)"
