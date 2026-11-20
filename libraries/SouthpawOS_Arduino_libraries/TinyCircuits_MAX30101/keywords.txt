@@ -1,0 +1,94 @@
+#######################################
+# Syntax Coloring Map for MAX30101
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+MAX30101				KEYWORD1
+
+Mode 					KEYWORD1
+SamplingRate 			KEYWORD1
+SampleAveragingCount 	KEYWORD1
+LEDPulseWidth 			KEYWORD1
+LEDCurrent 				KEYWORD1
+
+PulseStateMachine	 	KEYWORD1
+fifo_t 					KEYWORD1
+dcFilter_t 				KEYWORD1
+butterworthFilter_t 	KEYWORD1
+meanDiffFilter_t 		KEYWORD1
+RunningAverage 			KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin								KEYWORD2
+setMode								KEYWORD2
+setSamplingRateAndAveragingCount	KEYWORD2
+setLEDPulseWidth					KEYWORD2
+setLEDCurrents						KEYWORD2
+readTemperature						KEYWORD2
+updateTemperature					KEYWORD2
+readFIFO							KEYWORD2
+printRegisters						KEYWORD2
+printAlgorithmVals					KEYWORD2
+foundPeak							KEYWORD2
+dcRemoval							KEYWORD2
+lowPassButterworthFilter			KEYWORD2
+meanDiff 							KEYWORD2
+update 								KEYWORD2
+pulseValid 							KEYWORD2
+BPM 								KEYWORD2
+cardiogram 							KEYWORD2
+oxygen 								KEYWORD2
+temperature 						KEYWORD2
+temperatureF 						KEYWORD2
+rawCardiogram 						KEYWORD2
+rawIRVal 							KEYWORD2
+rawRedVal 							KEYWORD2
+DCfilteredIRVal 					KEYWORD2
+DCfilteredRedVal 					KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+MAX30101_DEVICE_ADDR            LITERAL1
+
+MAX30101_REV_ID                 LITERAL1
+MAX30101_PART_ID                LITERAL1
+MAX30101_PART_ID_VALUE          LITERAL1
+
+MAX30101_INT_STATUS_1           LITERAL1
+MAX30101_INT_STATUS_1           LITERAL1
+MAX30101_INT_STATUS_2           LITERAL1
+MAX30101_INT_ENABLE_1           LITERAL1
+MAX30101_INT_ENABLE_2           LITERAL1
+
+MAX30101_FIFO_WRITE_PTR         LITERAL1
+MAX30101_FIFO_OVERFLOW_COUNTER 	LITERAL1
+MAX30101_FIFO_READ_PTR        	LITERAL1
+MAX30101_FIFO_DATA              LITERAL1
+MAX30101_FIFO_CONFIG            LITERAL1
+
+MAX30101_MODE_CONF              LITERAL1
+MAX30101_SPO2_CONF              LITERAL1
+
+MAX30101_LED1_PA                LITERAL1
+MAX30101_LED2_PA                LITERAL1
+MAX30101_LED3_PA                LITERAL1
+MAX30101_LED4_PA                LITERAL1
+
+MAX30101_TEMP_INT               LITERAL1
+MAX30101_TEMP_FRACTION          LITERAL1
+MAX30101_TEMP_CONFIG            LITERAL1
+
+MAX30101_MODE_SHDN              LITERAL1
+MAX30101_MODE_RESET             LITERAL1
+
+MAX30101_SPO2_HI_RES_EN         LITERAL1
+
+MAX30101_FIFO_PTR_MAX 			LITERAL1

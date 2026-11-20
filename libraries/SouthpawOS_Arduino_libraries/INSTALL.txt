@@ -1,0 +1,31 @@
+SouthpawOS - Arduino libraries
+==============================
+
+1) Board package (Arduino IDE)
+   File > Preferences > Additional Boards Manager URLs, paste:
+     http://files.tinycircuits.com/ArduinoBoards/package_tinycircuits_index.json
+   Tools > Board > Boards Manager: install
+     - "Arduino SAMD Boards (32-bits ARM Cortex-M0+)"  (by Arduino)
+     - "TinyCircuits SAMD Boards"                      (latest 1.1.0)
+   Then Tools > Board > TinyCircuits SAMD Boards > TinyScreen+
+   (TinyZero is in the same package if you use one.)
+
+2) Libraries
+   Close the Arduino IDE. Copy every folder below (not this INSTALL.txt)
+   into  Documents\Arduino\libraries\  so you get e.g.
+   Documents\Arduino\libraries\TinyScreen\library.properties
+   Reopen the IDE. If a folder with the same library already exists there,
+   delete the old one first, or you get "multiple libraries found".
+
+   Folder                 #include         Used by                          Source
+   TinyScreen             TinyScreen.h     bag, southpaw_wrist              Arduino Library Manager 1.1.0
+   FlashStorage           FlashStorage.h   bag                              Arduino Library Manager 1.0.0 (cmaglie)
+   Wireling               Wireling.h       bag                              Arduino Library Manager 0.1.1
+   TinyCircuits_BMA250    BMA250.h         bag, southpaw_wrist, wrist_logger  github.com/TinyCircuits/TinyCircuits-BMA250-Library (master)
+   TinyCircuits_MAX30101  MAX30101.h       bag (PULSE_ENABLED 1)            github.com/TinyCircuits/TinyCircuits-MAX30101-Library (master)
+   STBLE                  STBLE.h          southpaw_wrist                   STBLE.zip from github.com/TinyCircuits/TinyCircuits-TinyShield-BLE-ASD2116
+
+   Wire.h and SPI.h come with the board package. Everything else the sketches
+   include (config.h, sampler.h, ble.h, ...) is a file inside the sketch folder.
+   The bag sketch's ble.h / ble.cpp are part of the repo: restore them with
+     git checkout -- firmware/bag/ble.h firmware/bag/ble.cpp firmware/bag/README.md
