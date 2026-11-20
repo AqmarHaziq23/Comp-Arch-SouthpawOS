@@ -20,6 +20,8 @@ tested without a real Telegram bot. It handles:
     reader, so only people at the bag can see pictures of the room. The "card scanned"
     message also gets a one-line camera check while vision is running.
 
+  * /status and /shutdown for the Pi's owner only (ADMIN_CHAT_IDS in .env, see pi_admin.py).
+
 Why a Telegram bot can't just use @usernames: bots may only message people who have
 opened the bot and pressed Start, and they do it by numeric chat id. That's why each
 player links their card once with /link.
@@ -38,12 +40,13 @@ log = logging.getLogger("southpaw.core")
 
 class SouthpawBot:
     def __init__(self, storage, send, link_timeout_s=60, clock=time.monotonic,
-                 read_camera=camera_check.read_snapshot, wall_clock=time.time):
+                 read_camera=camera_check.read_snapshot, wall_clock=time.time, admin_chat_ids=()):
         """
-        storage:     a Storage (storage.py)
-        send:        async function send(chat_id, html_text) that delivers a Telegram message
-        read_camera: function returning vision's latest (report, jpeg_bytes) (camera_check.py)
-        wall_clock:  the time of day in seconds (vision's report says when it was made)
+        storage:        a Storage (storage.py)
+        send:           async function send(chat_id, html_text) that delivers a Telegram message
+        read_camera:    function returning vision's latest (report, jpeg_bytes) (camera_check.py)
+        wall_clock:     the time of day in seconds (vision's report says when it was made)
+        admin_chat_ids: the Pi owner's chat ids (ADMIN_CHAT_IDS in .env): only they may /status, /shutdown
         """
         self.storage = storage
         self.send = send
@@ -51,6 +54,7 @@ class SouthpawBot:
         self.clock = clock
         self.read_camera = read_camera
         self.wall_clock = wall_clock
+        self.admin_chat_ids = set(admin_chat_ids)
         self.pending = None   # waiting /link: {"chat_id", "username", "first_name", "expires"}
 
     # ------------------------------------------------------------------------------------
@@ -119,6 +123,33 @@ class SouthpawBot:
         if camera_check.is_fresh(report, now) and report.get("camera"):
             return text, photo
         return text, None            # vision stopped or the camera is gone: never send an old picture
+
+    # ------------------------------------------------------------------------------------
+    # Commands for the Pi's owner only: /status and /shutdown (see pi_admin.py)
+    # ------------------------------------------------------------------------------------
+
+    def admin_refusal(self, chat_id):
+        """None if this chat is the Pi's owner; otherwise the reply that says how to become one."""
+        if chat_id in self.admin_chat_ids:
+            return None
+        return ("🔒 Only the Pi's owner can use this.\n\n"
+                f"Your chat id is <code>{chat_id}</code>. To allow this chat, add it to "
+                "<code>ADMIN_CHAT_IDS</code> in <code>telegram_bot/.env</code> on the Pi, "
+                "then restart the bot (<code>sudo systemctl restart southpaw-bot</code>).")
+
+    def shutdown_reply(self, chat_id, args):
+        """/shutdown asks first; /shutdown yes really does it. Returns (reply text, shut down now?)."""
+        refusal = self.admin_refusal(chat_id)
+        if refusal:
+            return refusal, False
+        if [a.lower() for a in args or []] != ["yes"]:
+            return ("🔌 Switch the Pi off? A game in progress stops, and nothing works again until the "
+                    "power is unplugged and plugged back in.\n\nSend <b>/shutdown yes</b> to confirm."), False
+        log.warning("Shutdown requested by chat %s", chat_id)
+        return ("🔌 <b>Shutting down…</b>\n\n"
+                "Unplug the Pi when its <b>green light stops flickering</b> (about 20 s; only the red light "
+                "stays on).\n\nTo play again: plug the power back in and wait about a minute. "
+                "Everything starts by itself."), True
 
     def _camera_snapshot(self):
         """Vision's latest (report, photo). Never crashes the bot if something is odd."""

@@ -40,6 +40,27 @@ hotspot — no port forwarding or public address needed. The Pi just needs inter
 | `/camera` | Photo from the camera + "can it see you?" check (linked players only) |
 | `/unlink` | Remove the link, stop receiving results |
 
+## Owner commands: `/status` and `/shutdown`
+
+Only for the chat ids in `ADMIN_CHAT_IDS` in `.env`. They aren't in the players' command menu.
+
+| Command | Does |
+|---|---|
+| `/status` | The Pi's IP address (for SSH from a phone app), which SouthpawOS programs are running, how long it's been on |
+| `/shutdown` | Asks to confirm; `/shutdown yes` switches the Pi off properly. Unplug when the green light stops flickering. Plug back in to play again: everything starts by itself |
+
+**Set up once on the Pi:**
+1. **Find your chat id:** send `/status` to the bot. Anyone not allowed yet gets their chat id in the reply.
+2. **Allow it:** put it in `.env` as `ADMIN_CHAT_IDS=123456789` (several: comma-separated), then
+   `sudo systemctl restart southpaw-bot`.
+3. **Give the bot permission to switch the Pi off:** run `bash allow_shutdown.sh` (in this folder) once.
+   - **What it adds:** one sudo rule that lets the bot's account run `/usr/bin/systemctl poweroff` without a
+     password, and nothing else.
+   - **To take it back:** `bash allow_shutdown.sh --remove`.
+
+**An old `/shutdown` can't act twice:** when the bot starts, it skips messages that were sent while it was off, so
+a `/shutdown` can't switch the Pi off again after the next boot.
+
 ## `/camera`: is the camera set up right?
 
 The player sends `/camera` and gets the newest webcam picture (at most a second old) with the overlay drawn
@@ -138,6 +159,8 @@ Logic tests (no Telegram needed): `python test_core.py`
 | `bot.py` | **Run this.** Telegram commands + listens for the hub |
 | `core.py` | The logic: linking, card taps, round summaries, `/camera` |
 | `camera_check.py` | Reads vision's latest picture and writes the `/camera` check |
+| `pi_admin.py` | `/status` (IP, services) and `/shutdown` for the Pi's owner |
+| `allow_shutdown.sh` | Run once on the Pi: lets the bot switch the Pi off (one sudo rule) |
 | `formatting.py` | Builds the round-summary message |
 | `storage.py` | Local SQLite database (`players.db`) |
 | `simulate.py` | Pretends to be the NFC reader and hub (testing) |
@@ -152,5 +175,7 @@ Logic tests (no Telegram needed): `python test_core.py`
 - **Linking needs the physical card** on the reader within 60 s of `/link`, so nobody can link a card
   remotely. (NFC UIDs *can* be cloned with the right tools: fine for a game, not for anything sensitive.)
 - `players.db` holds Telegram chat ids and round history: personal data. It stays on the Pi and is git-ignored.
+- **`/status` and `/shutdown`** only work for the chat ids in `ADMIN_CHAT_IDS`. The sudo rule from
+  `allow_shutdown.sh` allows only the power-off command, nothing else.
 - **`/camera` pictures** only go to chats with a linked card. Vision keeps its one picture in memory
   (`/dev/shm`), only its own account can open that folder, and the picture is gone after a reboot.
